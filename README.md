@@ -10,7 +10,7 @@ Learn Linux terminal step by step through clear explanations, real-world example
 
 ## 🌍 Available Languages
 
-- 🇮🇷 Persian (فارسی)
+- 🇮🇷 [دوره فارسی Linux Terminal Mastery](./Persian/COURSE.md)
 - 🇬🇧 English
 
 This project aims to make high-quality Linux education accessible for everyone.
