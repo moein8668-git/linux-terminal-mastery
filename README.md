@@ -1,101 +1,264 @@
 # 🐧 Linux Terminal Mastery
 
-## From Zero to Linux Power User
+## از صفر تا تسلط بر ترمینال لینوکس
 
-A complete open-source Linux command line course designed to take you from absolute beginner to confident Linux user.
-
-Learn Linux terminal step by step through clear explanations, real-world examples, practical exercises, and hands-on projects.
-
----
-
-## 🌍 Available Languages
-
-- 🇮🇷 [دوره فارسی Linux Terminal Mastery](./Persian)
-- 🇬🇧 English
-
-This project aims to make high-quality Linux education accessible for everyone.
+یک دوره آموزشی جامع، رایگان و متن‌باز برای یادگیری خط فرمان لینوکس؛
+از مفاهیم پایه تا استفاده حرفه‌ای از ترمینال، مدیریت سیستم، اسکریپت‌نویسی و کار با سیستم‌های لینوکسی در دنیای واقعی.
 
 ---
 
-# 📖 About This Project
+## 📌 درباره پروژه
 
-Linux Terminal Mastery is a free and open-source course that teaches Linux command line from absolute zero to professional usage.
+**Linux Terminal Mastery** یک دوره آموزشی آزاد و رایگان است که هدف آن آموزش لینوکس از سطح کاملاً مبتدی تا سطح یک کاربر حرفه‌ای است.
 
-This project is not a simple collection of commands.
+این پروژه فقط مجموعه‌ای از دستورات لینوکس نیست.
 
-The goal is to build a deep understanding of Linux by explaining how the system works, why each tool exists, and how to apply these concepts in real-world situations.
+هدف اصلی این دوره ایجاد یک درک عمیق از نحوه کار لینوکس است:
 
-Throughout this journey, you will learn how to use Linux as a user, developer, system administrator, and problem solver.
+* چرا لینوکس این‌گونه کار می‌کند؟
+* پشت هر دستور چه اتفاقی می‌افتد؟
+* سیستم‌عامل چگونه منابع را مدیریت می‌کند؟
+* چگونه مشکلات را پیدا و حل کنیم؟
+* چگونه کارهای تکراری را خودکار کنیم؟
+
+در پایان این مسیر، شما قادر خواهید بود لینوکس را مانند یک کاربر، توسعه‌دهنده و مدیر سیستم استفاده کنید.
 
 ---
 
-# 🎯 Learning Philosophy
+# 🎯 فلسفه یادگیری
 
-Learning Linux is not about memorizing hundreds of commands.
+یادگیری لینوکس حفظ کردن صدها دستور نیست.
 
-A skilled Linux user understands:
+یک کاربر حرفه‌ای لینوکس می‌داند:
 
-- Why Linux works this way
-- What happens behind every command
-- How the operating system manages resources
-- How to solve problems efficiently
-- How to automate repetitive tasks
-- How to manage and secure systems
+* هر ابزار چه مشکلی را حل می‌کند
+* سیستم چگونه تصمیم می‌گیرد
+* چگونه اطلاعات را پیدا کند
+* چگونه مشکلات را تحلیل کند
+* چگونه فرآیندها را مدیریت کند
+* چگونه سیستم را امن و قابل اعتماد نگه دارد
 
-Every topic follows this path:
+مسیر هر موضوع:
 
 ```
-Concept
-   ↓
-Understanding
-   ↓
-Practice
-   ↓
-Exercises
-   ↓
-Real Projects
+مفهوم
+  ↓
+درک عمیق
+  ↓
+تمرین
+  ↓
+حل مسئله
+  ↓
+پروژه واقعی
 ```
 
 ---
 
-# 📚 What You Will Learn
+# 📚 سرفصل‌های دوره
 
-🐧 Linux Fundamentals  
-Understanding Linux, the terminal, shell, kernel, and core concepts.
+## 🐧 مبانی لینوکس
 
-💻 Command Line Interface  
-Working with commands, navigation, files, directories, and powerful terminal tools.
+یادگیری:
 
-📂 Linux Filesystem  
-Understanding the Linux directory structure, paths, system folders, and file organization.
-
-🔐 Permissions & Security  
-Learning ownership, users, groups, permissions, chmod, chown, and Linux security principles.
-
-👤 Users & Groups  
-Managing users, groups, root access, and system administration basics.
-
-📦 Package Management  
-Installing, updating, and managing software in Linux environments.
-
-⚙️ Processes & Services  
-Understanding processes, services, background tasks, and system monitoring.
-
-🌐 Networking  
-Learning networking fundamentals, IP addresses, ports, DNS, SSH, and troubleshooting.
-
-📝 Bash Scripting  
-Creating scripts, automating tasks, working with variables, conditions, loops, and building tools.
-
-🛡️ Linux Security  
-Understanding system protection, logs, monitoring, and security practices.
-
-🚀 System Administration  
-Managing Linux systems, servers, automation workflows, and real-world administration tasks.
+* لینوکس چیست؟
+* Kernel چیست؟
+* Shell چیست؟
+* Terminal چگونه کار می‌کند؟
+* تفاوت توزیع‌های لینوکس
+* ساختار کلی سیستم‌عامل
 
 ---
 
-# 🗺️ Learning Roadmap
+## 💻 خط فرمان لینوکس
+
+یادگیری کار حرفه‌ای با Terminal:
+
+* اجرای دستورات
+* مدیریت فایل‌ها
+* مسیرها
+* Pipe و Redirect
+* جستجو
+* ابزارهای کاربردی CLI
+
+دستورات:
+
+```bash
+ls
+cd
+pwd
+cat
+grep
+find
+echo
+less
+head
+tail
+```
+
+---
+
+## 📂 فایل سیستم لینوکس
+
+یادگیری:
+
+* ساختار دایرکتوری‌ها
+* مسیرهای مطلق و نسبی
+* فایل‌های سیستمی
+* پوشه‌های مهم لینوکس
+
+ساختار:
+
+```
+/
+├── home
+├── etc
+├── usr
+├── var
+├── bin
+├── tmp
+└── root
+```
+
+---
+
+## 🔐 مجوزها و امنیت فایل‌ها
+
+موضوعات:
+
+* Permission
+* Owner
+* Group
+* chmod
+* chown
+* مدیریت دسترسی‌ها
+
+مثال:
+
+```bash
+chmod 755 script.sh
+```
+
+---
+
+## 👤 کاربران و گروه‌ها
+
+یادگیری:
+
+* ساخت کاربران
+* مدیریت گروه‌ها
+* root
+* sudo
+* کنترل دسترسی
+
+---
+
+## 📦 مدیریت نرم‌افزار
+
+یادگیری:
+
+* Package Manager
+* نصب برنامه‌ها
+* حذف بسته‌ها
+* بروزرسانی سیستم
+
+مثال:
+
+```bash
+sudo apt update
+sudo apt install package-name
+```
+
+---
+
+## ⚙️ پردازش‌ها و سرویس‌ها
+
+یادگیری:
+
+* Process چیست؟
+* مدیریت پردازش‌ها
+* سرویس‌های سیستم
+* مانیتورینگ منابع
+
+ابزارها:
+
+```bash
+ps
+top
+htop
+systemctl
+kill
+```
+
+---
+
+## 🌐 شبکه در لینوکس
+
+یادگیری:
+
+* IP
+* Port
+* DNS
+* SSH
+* Network Troubleshooting
+
+ابزارها:
+
+```bash
+ping
+ip
+ss
+ssh
+curl
+wget
+```
+
+---
+
+## 📝 Bash Scripting
+
+یادگیری:
+
+* ساخت اسکریپت
+* متغیرها
+* شرط‌ها
+* حلقه‌ها
+* اتوماسیون
+
+مثال:
+
+```bash
+#!/bin/bash
+
+echo "Hello Linux"
+```
+
+---
+
+## 🛡️ امنیت لینوکس
+
+یادگیری:
+
+* Log ها
+* امنیت کاربران
+* Hardening
+* بررسی فعالیت سیستم
+* اصول محافظت از سیستم
+
+---
+
+## 🚀 مدیریت سیستم
+
+موضوعات پیشرفته:
+
+* مدیریت سرور
+* نگهداری سیستم
+* Automation
+* مدیریت منابع
+* Workflow های واقعی
+
+---
+
+# 🗺️ مسیر یادگیری
 
 ```
 🌱 Linux Beginner
@@ -119,90 +282,95 @@ Managing Linux systems, servers, automation workflows, and real-world administra
 
 ---
 
-# 🧪 Learning Experience
+# 🧪 تجربه یادگیری
 
-This course includes:
+این دوره شامل:
 
-- Step-by-step chapters
-- Clear explanations
-- Practical examples
-- Exercises
-- Mini projects
-- Real-world scenarios
-- Cheat sheets
-- Useful scripts
+* فصل‌های مرحله‌به‌مرحله
+* توضیحات ساده و عمیق
+* مثال‌های واقعی
+* تمرین‌ها
+* پروژه‌های عملی
+* Cheat Sheet
+* اسکریپت‌های کاربردی
 
-The goal is to help you understand Linux deeply and confidently use the command line in real situations.
+هدف این است که فقط دستورها را یاد نگیرید؛
+بلکه بتوانید با لینوکس فکر کنید.
 
 ---
 
-# 🏗️ Repository Structure
+# 🏗️ ساختار پروژه
 
 ```
 linux-terminal-mastery/
 
-├── Persian/          # Persian version of the course
-├── English/          # English version of the course
-├── Exercises/        # Practice tasks
-├── Projects/         # Hands-on projects
-├── Scripts/          # Linux scripts and tools
-├── Cheat-Sheets/     # Quick references
-└── Assets/           # Images and resources
+├── Persian/
+│
+├── English/
+│
+├── Exercises/
+│
+├── Projects/
+│
+├── Scripts/
+│
+├── Cheat-Sheets/
+│
+└── Assets/
 ```
 
 ---
 
-# 📖 Course Status
+# 📖 وضعیت پروژه
 
-🚧 Currently under active development.
+🚧 این پروژه در حال توسعه فعال است.
 
-New chapters, exercises, projects, and improvements are added continuously.
-
----
-
-# 🤝 Contribution
-
-This is an open-source educational project.
-
-Everyone is welcome to contribute by:
-
-- Improving explanations
-- Fixing mistakes
-- Adding examples
-- Creating translations
-- Suggesting improvements
-
-Together we can make Linux education more accessible.
+فصل‌های جدید، تمرین‌ها، پروژه‌ها و بهبودهای مختلف به مرور اضافه خواهند شد.
 
 ---
 
-# ⭐ Support
+# 🤝 مشارکت
 
-If you find this project useful:
+این پروژه یک پروژه آموزشی متن‌باز است.
 
-- Star the repository ⭐
-- Share it with others
-- Contribute improvements
-- Help grow the Linux learning community
+همه می‌توانند مشارکت کنند:
+
+* بهبود توضیحات
+* اصلاح اشتباهات
+* اضافه کردن مثال‌ها
+* ترجمه محتوا
+* پیشنهاد ایده‌های جدید
+
+با همکاری هم می‌توانیم یادگیری لینوکس را برای همه آسان‌تر کنیم.
+
+---
+
+# ⭐ حمایت از پروژه
+
+اگر این پروژه برای شما مفید بود:
+
+* به Repository ستاره بدهید ⭐
+* آن را با دیگران به اشتراک بگذارید
+* در توسعه آن مشارکت کنید
 
 ---
 
 # 📜 License
 
-This project is open-source and available for everyone to learn, use, and improve.
+این پروژه متن‌باز است و برای یادگیری، استفاده و توسعه توسط همه آزاد است.
 
 ---
 
-# 🐧 Welcome to Linux
+# 🐧 به دنیای لینوکس خوش آمدید
 
-The terminal is not just a black screen full of commands.
+ترمینال فقط یک صفحه سیاه پر از دستور نیست.
 
-It is a powerful interface that allows you to understand, control, and build with your computer.
+ترمینال یک رابط قدرتمند برای شناخت، کنترل و ساختن با کامپیوتر است.
 
-Start from zero.
+از صفر شروع کنید.
 
-Learn the fundamentals.
+مفاهیم را یاد بگیرید.
 
-Master the command line.
+خط فرمان را تسلط پیدا کنید.
 
-Become a Linux Power User.
+به یک کاربر حرفه‌ای لینوکس تبدیل شوید.
