@@ -1,5 +1,7 @@
 # 🐧 Linux Terminal Mastery
-
+<p align="center">
+  <img src="./Assets/banner.png" alt="Linux Terminal Mastery Banner">
+</p>
 ## از صفر تا تسلط بر ترمینال لینوکس
 
 یک دوره آموزشی جامع، رایگان و متن‌باز برای یادگیری خط فرمان لینوکس؛
