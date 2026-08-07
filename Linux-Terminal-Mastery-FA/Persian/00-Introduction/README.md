@@ -3,9 +3,7 @@
 # Linux Terminal Mastery
 
 ## From Zero to Linux Power User
-<p align="center">
-  <img src="./Assets/00banner.png" alt="Linux">
-</p>
+![Banner](Assets/00.png)
 
 به دنیای لینوکس و قدرت خط فرمان خوش آمدید.
 
