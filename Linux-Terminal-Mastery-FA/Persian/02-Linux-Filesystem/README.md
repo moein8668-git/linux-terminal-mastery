@@ -46,9 +46,9 @@ Root Directory نقطه شروع تمام مسیرهای موجود در سیس�
 ## Root Directory
 
 Root Directory یک مسیر در فایل سیستم است:
-
+```bash
 /
-
+```
 این مسیر نشان‌دهنده بالاترین سطح ساختار فایل‌ها در لینوکس است.
 
 ---
@@ -159,9 +159,11 @@ Home Directory کاربر root
 نمونه فایل‌ها:
 ```bash
 /etc/passwd
-
+```
+```bash
 /etc/hosts
-
+```
+```bash
 /etc/fstab
 ```
 برای مثال:
@@ -216,9 +218,11 @@ echo
 نمونه‌ها:
 ```bash
 shutdown
-
+```
+```bash
 reboot
-
+```
+```bash
 fdisk
 ```
 ---
@@ -394,9 +398,9 @@ Documents/file.txt
 دو علامت مهم در مسیرهای لینوکس وجود دارد.
 
 ## نقطه
-
+```bash
 .
-
+```
 به مسیر فعلی اشاره می‌کند.
 
 مثال:
@@ -408,9 +412,9 @@ Documents/file.txt
 ---
 
 ## دو نقطه
-
+```bash
 ..
-
+```
 به پوشه والد اشاره می‌کند.
 
 مثال:
@@ -420,9 +424,9 @@ Documents/file.txt
 /home/username/Documents
 ```
 با استفاده از:
-
+```bash
 ..
-
+```
 به مسیر زیر بازمی‌گردیم:
 ```bash
 /home/username
