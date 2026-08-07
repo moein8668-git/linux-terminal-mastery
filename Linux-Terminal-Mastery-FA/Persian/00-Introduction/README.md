@@ -3,6 +3,9 @@
 # Linux Terminal Mastery
 
 ## From Zero to Linux Power User
+<p align="center">
+  <img src="./Assets/00.png" alt="Linux Terminal Mastery Banner">
+</p>
 
 به دنیای لینوکس و قدرت خط فرمان خوش آمدید.
 
