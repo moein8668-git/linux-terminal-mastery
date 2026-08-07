@@ -4,7 +4,7 @@
 
 ## From Zero to Linux Power User
 <p align="center">
-  <img src="./Assets/00.png" alt="Banner" width="100%">
+  <img src="../../../Assets/00.png" alt="Linux Terminal Mastery Banner" width="100%">
 </p>
 
 به دنیای لینوکس و قدرت خط فرمان خوش آمدید.
