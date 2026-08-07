@@ -1,4 +1,4 @@
-# فصل شانزدهم: مدیریت دیسک و ذخیره‌سازی در لینوکس
+# فصل چهاردهم: مدیریت دیسک و ذخیره‌سازی در لینوکس
 
 ## Linux Disk and Storage Management
 
@@ -381,7 +381,7 @@ Human Readable
 
 با find:
 
-    find / -size +1G
+    sudo find / -xdev -type f -size +1G 2>/dev/null
 
 فایل‌های بزرگ‌تر از 1GB را پیدا می‌کند.
 
@@ -539,13 +539,11 @@ LVM یک سیستم مدیریت Storage انعطاف‌پذیر است.
 
 افزایش آسان فضا است.
 
-مثال:
+ابتدا نوع File System، مسیر دقیق LV و فضای آزاد VG را بررسی کنید. برای نمونه، افزایش ext4 به‌اندازهٔ 10GiB همراه با رشد File System:
 
-    lvextend
+    sudo lvextend --resizefs -L +10G /dev/vg_name/lv_name
 
-سپس:
-
-    resize2fs
+گزینهٔ `--resizefs` ابزار مناسب File System را فراخوانی می‌کند. XFS قابل کوچک‌کردن نیست و کوچک‌کردن LV یا File System بدون ترتیب و نسخهٔ پشتیبان می‌تواند داده را نابود کند.
 
 ---
 
@@ -624,25 +622,25 @@ LVM یک سیستم مدیریت Storage انعطاف‌پذیر است.
 
 ساخت Partition:
 
-    fdisk
+    sudo fdisk /dev/sdb
 
 ساخت File System:
 
-    mkfs.ext4
+    sudo mkfs.ext4 /dev/sdb1
 
 ساخت مسیر:
 
-    mkdir /mnt/storage
+    sudo mkdir -p /mnt/storage
 
 Mount:
 
-    mount /dev/sdb1 /mnt/storage
+    sudo mount /dev/sdb1 /mnt/storage
 
-ثبت در fstab.
+پس از گرفتن UUID با `blkid`، ورودی مناسب را در `fstab` ثبت کنید و پیش از reboot با `sudo mount -a` آن را آزمایش کنید. انتخاب اشتباه دیسک یا اجرای `mkfs` اطلاعات را از بین می‌برد؛ نام Device را با `lsblk -f` دوباره بررسی کنید.
 
 ---
 
-# تمرین‌های فصل شانزدهم
+# تمرین‌های فصل چهاردهم
 
 ## تمرین اول
 
@@ -678,7 +676,7 @@ Mount:
 
 ---
 
-# جمع‌بندی فصل شانزدهم
+# جمع‌بندی فصل چهاردهم
 
 در این فصل یاد گرفتیم:
 
