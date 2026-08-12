@@ -11,7 +11,8 @@ var catalog=null;
 var heads=[], segs=[], tocLinks=[];
 
 function rootUrl(path){
-  return new URL(path||'', new URL(SITE_BASE||'./', location.href)).href;
+  var siteRoot=new URL('/', location.origin);
+  return new URL(String(path||'').replace(/^\/+/,''), siteRoot).href;
 }
 function lessonUrl(slug){
   return slug==='home' ? rootUrl('') : rootUrl('chapters/'+slug+'/');
