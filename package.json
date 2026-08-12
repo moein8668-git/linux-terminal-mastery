@@ -1,0 +1,12 @@
+{
+  "name": "linux-terminal-mastery-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "npm run build"
+  },
+  "dependencies": {
+    "marked": "^16.2.0"
+  }
+}
