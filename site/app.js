@@ -346,8 +346,18 @@ function bindLessonLinks(){
     link.dataset.tabBound='1';
     link.addEventListener('click',function(e){
       if(link.getAttribute('aria-disabled')==='true') return;
+      if(e.button!==0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
       e.preventDefault();
       openLesson(slug, false);
+    });
+    link.addEventListener('auxclick',function(e){
+      if(link.getAttribute('aria-disabled')==='true') return;
+      if(e.button!==1) return;
+      e.preventDefault();
+      openLesson(slug, true);
+    });
+    link.addEventListener('mousedown',function(e){
+      if(e.button===1) e.preventDefault();
     });
   });
   document.querySelectorAll('.tag[data-tag]').forEach(function(tagEl){
@@ -446,6 +456,14 @@ function renderTabs(slugs, active){
       if(e.target.getAttribute('data-close-tab')) return;
       openLesson(slug, false);
     });
+    btn.addEventListener('auxclick',function(e){
+      if(e.button!==1) return;
+      e.preventDefault();
+      closeLesson(slug);
+    });
+    btn.addEventListener('mousedown',function(e){
+      if(e.button===1) e.preventDefault();
+    });
     tabstrip.appendChild(btn);
   });
   tabstrip.querySelectorAll('[data-close-tab]').forEach(function(x){
@@ -476,8 +494,12 @@ async function openLesson(slug, forceNew){
   var meta=lessonMeta(slug);
   if(!meta){ location.href=lessonUrl(slug); return; }
   var state=tabState();
-  if(forceNew || state.slugs.indexOf(slug)===-1){
+  if(forceNew){
     if(state.slugs.indexOf(slug)===-1) state.slugs.push(slug);
+  }else if(state.slugs.indexOf(slug)===-1){
+    var idx=state.slugs.indexOf(state.active);
+    if(idx===-1) state.slugs.push(slug);
+    else state.slugs[idx]=slug;
   }
   state.active=slug;
   renderTabs(state.slugs, slug);
