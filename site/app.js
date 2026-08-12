@@ -160,7 +160,7 @@ function setScan(on){ document.documentElement.dataset.scan=on?'on':'off';
   if(miScan) miScan.setAttribute('aria-checked',on?'true':'false');
   try{ localStorage.setItem('lt-scan',on?'1':'0'); }catch(e){} }
 if(miScan) miScan.addEventListener('click',function(){ setScan(miScan.getAttribute('aria-checked')!=='true'); });
-setScan((function(){ try{ return localStorage.getItem('lt-scan')!=='0'; }catch(e){ return true; } })());
+setScan((function(){ try{ return localStorage.getItem('lt-scan')==='1'; }catch(e){ return false; } })());
 
 /* ---------- find ---------- */
 var findbar=document.getElementById('findbar'), findInput=document.getElementById('findInput'),

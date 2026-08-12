@@ -170,6 +170,7 @@ await rm(outputRoot, { recursive: true, force: true });
 await mkdir(outputRoot, { recursive: true });
 await cp(join(sourceRoot, "styles.css"), join(outputRoot, "styles.css"));
 await cp(join(sourceRoot, "app.js"), join(outputRoot, "app.js"));
+await cp(join(sourceRoot, "favicon.svg"), join(outputRoot, "favicon.svg"));
 await cp(join(sourceRoot, "_headers"), join(outputRoot, "_headers"));
 await cp(join(root, "Assets"), join(outputRoot, "Assets"), { recursive: true });
 await cp(join(root, "README.md"), join(outputRoot, "README.md"));
