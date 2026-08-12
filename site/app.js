@@ -505,7 +505,10 @@ async function showLesson(meta, tabId, push){
     bindPane(false);
     pane.scrollTop=0;
   }
-  if(push!==false) history.pushState({slug:meta.slug, tab:tabId}, meta.title, lessonUrl(meta.slug));
+  if(push!==false){
+    var address=new URL(lessonUrl(meta.slug), location.href);
+    history.pushState({slug:meta.slug, tab:tabId}, meta.title, address.pathname+address.search+address.hash);
+  }
 }
 async function openLesson(slug, forceNew){
   var meta=lessonMeta(slug);
