@@ -89,7 +89,8 @@ const renderPage = (chapter, content, base) => template
   .replace("{{CONTENT}}", content);
 
 for (const chapter of chapters) {
-  const content = marked.parse(chapter.markdown.replaceAll(/\]\(\.\.\/\.\.\/\.\.\/Assets\//g, "](/Assets/"));
+  const body = chapter.markdown.replace(/^#\s+.+\n?/m, "");
+  const content = marked.parse(body.replaceAll(/\]\(\.\.\/\.\.\/\.\.\/Assets\//g, "](/Assets/"));
   const dir = join(outputRoot, "chapters", chapter.slug);
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, "index.html"), renderPage(chapter, content, "../../"));
