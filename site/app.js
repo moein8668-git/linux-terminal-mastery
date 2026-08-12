@@ -425,41 +425,53 @@ function bindPane(first){
 
 /* ---------- in-page tabs ---------- */
 var tabstrip=document.getElementById('tabstrip');
-var TAB_KEY='lt-open-tabs';
+var TAB_KEY='lt-open-tabs-v2';
+var tabCache={};
+var activeTabId=null;
 function lessonMeta(slug){
   if(!catalog) return null;
   if(slug==='home') return catalog.home;
   return (catalog.chapters||[]).filter(function(c){ return c.slug===slug; })[0]||null;
 }
+function newTabId(){ return 'tab-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
 function readTabs(){
-  try{ return JSON.parse(sessionStorage.getItem(TAB_KEY)||'[]'); }catch(e){ return []; }
+  try{ return JSON.parse(sessionStorage.getItem(TAB_KEY)||'null'); }catch(e){ return null; }
 }
-function writeTabs(slugs, active){
-  try{ sessionStorage.setItem(TAB_KEY, JSON.stringify({slugs:slugs, active:active})); }catch(e){}
+function writeTabs(state){
+  try{ sessionStorage.setItem(TAB_KEY, JSON.stringify({tabs:state.tabs, active:state.active})); }catch(e){}
 }
 function tabState(){
   var saved=readTabs();
-  var slugs=saved.slugs&&saved.slugs.length?saved.slugs.slice():[CHAPTER];
-  if(slugs.indexOf(CHAPTER)===-1) slugs.push(CHAPTER);
-  return {slugs:slugs, active:saved.active||CHAPTER};
+  if(saved&&saved.tabs&&saved.tabs.length){
+    return {tabs:saved.tabs.slice(), active:saved.active||saved.tabs[0].id};
+  }
+  var id=newTabId();
+  return {tabs:[{id:id, slug:CHAPTER}], active:id};
 }
-function renderTabs(slugs, active){
+function currentTab(state){
+  return state.tabs.filter(function(t){ return t.id===state.active; })[0]||state.tabs[0];
+}
+function snapshotTab(id){
+  if(!id) return;
+  tabCache[id]={html:pane.innerHTML, scroll:pane.scrollTop, slug:CHAPTER};
+}
+function renderTabs(state){
   if(!tabstrip) return;
   tabstrip.innerHTML='';
-  slugs.forEach(function(slug){
-    var meta=lessonMeta(slug)||{slug:slug, tab:slug};
+  state.tabs.forEach(function(tab){
+    var meta=lessonMeta(tab.slug)||{slug:tab.slug, tab:tab.slug};
     var btn=document.createElement('button');
-    btn.type='button'; btn.className='tab'+(slug===active?' active':'');
-    btn.dataset.slug=slug;
-    btn.innerHTML='<span class="dot" aria-hidden="true"></span><span class="tx">user@linux-tutorials: '+meta.tab+'</span><span class="tclose" data-close-tab="'+slug+'">✕</span>';
+    btn.type='button'; btn.className='tab'+(tab.id===state.active?' active':'');
+    btn.dataset.tabId=tab.id;
+    btn.innerHTML='<span class="dot" aria-hidden="true"></span><span class="tx">user@linux-tutorials: '+meta.tab+'</span><span class="tclose" data-close-tab="'+tab.id+'">✕</span>';
     btn.addEventListener('click',function(e){
       if(e.target.getAttribute('data-close-tab')) return;
-      openLesson(slug, false);
+      activateTab(tab.id);
     });
     btn.addEventListener('auxclick',function(e){
       if(e.button!==1) return;
       e.preventDefault();
-      closeLesson(slug);
+      closeTab(tab.id);
     });
     btn.addEventListener('mousedown',function(e){
       if(e.button===1) e.preventDefault();
@@ -469,69 +481,115 @@ function renderTabs(slugs, active){
   tabstrip.querySelectorAll('[data-close-tab]').forEach(function(x){
     x.addEventListener('click',function(e){
       e.stopPropagation();
-      closeLesson(x.getAttribute('data-close-tab'));
+      closeTab(x.getAttribute('data-close-tab'));
     });
   });
-  writeTabs(slugs, active);
+  writeTabs(state);
+  activeTabId=state.active;
 }
-async function showLesson(meta, push){
-  if(meta.slug===CHAPTER && pane.querySelector('#doc-title')){
+async function showLesson(meta, tabId, push){
+  var cached=tabCache[tabId];
+  if(cached&&cached.slug===meta.slug){
+    pane.innerHTML=cached.html;
     applyChrome(meta);
-    return;
+    bindPane(false);
+    pane.scrollTop=cached.scroll||0;
+  }else{
+    var res=await fetch(lessonUrl(meta.slug));
+    var html=await res.text();
+    var doc=new DOMParser().parseFromString(html, 'text/html');
+    var next=doc.getElementById('pane');
+    if(!next) return;
+    pane.innerHTML=next.innerHTML;
+    applyChrome(meta);
+    bindPane(false);
+    pane.scrollTop=0;
   }
-  var res=await fetch(lessonUrl(meta.slug));
-  var html=await res.text();
-  var doc=new DOMParser().parseFromString(html, 'text/html');
-  var next=doc.getElementById('pane');
-  if(!next) return;
-  pane.innerHTML=next.innerHTML;
-  applyChrome(meta);
-  bindPane(false);
-  pane.scrollTop=0;
-  if(push!==false) history.pushState({slug:meta.slug}, meta.title, lessonUrl(meta.slug));
+  if(push!==false) history.pushState({slug:meta.slug, tab:tabId}, meta.title, lessonUrl(meta.slug));
 }
 async function openLesson(slug, forceNew){
   var meta=lessonMeta(slug);
   if(!meta){ location.href=lessonUrl(slug); return; }
   var state=tabState();
+  var cur=currentTab(state);
+  if(!forceNew && cur && cur.slug===slug && state.active===cur.id) return;
+  snapshotTab(state.active);
   if(forceNew){
-    if(state.slugs.indexOf(slug)===-1) state.slugs.push(slug);
-  }else if(state.slugs.indexOf(slug)===-1){
-    var idx=state.slugs.indexOf(state.active);
-    if(idx===-1) state.slugs.push(slug);
-    else state.slugs[idx]=slug;
+    var tab={id:newTabId(), slug:slug};
+    state.tabs.push(tab);
+    state.active=tab.id;
+  }else{
+    var cur=currentTab(state);
+    if(cur){
+      if(cur.slug!==slug) delete tabCache[cur.id];
+      cur.slug=slug;
+    }else{
+      cur={id:newTabId(), slug:slug};
+      state.tabs.push(cur);
+      state.active=cur.id;
+    }
   }
-  state.active=slug;
-  renderTabs(state.slugs, slug);
-  await showLesson(meta, true);
+  renderTabs(state);
+  await showLesson(meta, state.active, true);
 }
-function closeLesson(slug){
+async function activateTab(id){
   var state=tabState();
-  if(state.slugs.length<2){ toast('✗ last tab stays open'); return; }
-  state.slugs=state.slugs.filter(function(s){ return s!==slug; });
-  if(state.active===slug) state.active=state.slugs[state.slugs.length-1];
-  renderTabs(state.slugs, state.active);
-  var meta=lessonMeta(state.active);
-  if(meta) showLesson(meta, true);
+  var tab=state.tabs.filter(function(t){ return t.id===id; })[0];
+  if(!tab) return;
+  if(state.active===id && CHAPTER===tab.slug) return;
+  snapshotTab(state.active);
+  state.active=id;
+  renderTabs(state);
+  var meta=lessonMeta(tab.slug);
+  if(meta) await showLesson(meta, id, true);
+}
+function closeTab(id){
+  var state=tabState();
+  if(state.tabs.length<2){ toast('✗ last tab stays open'); return; }
+  snapshotTab(state.active);
+  state.tabs=state.tabs.filter(function(t){ return t.id!==id; });
+  delete tabCache[id];
+  if(state.active===id) state.active=state.tabs[state.tabs.length-1].id;
+  renderTabs(state);
+  var tab=currentTab(state);
+  var meta=tab&&lessonMeta(tab.slug);
+  if(meta) showLesson(meta, state.active, true);
 }
 
 var tabAdd=document.getElementById('tabAdd');
 if(tabAdd) tabAdd.addEventListener('click',function(){ openLesson('home', true); });
 window.addEventListener('popstate',function(){
   var slug=(history.state&&history.state.slug)||CHAPTER;
+  var id=history.state&&history.state.tab;
   var state=tabState();
-  if(state.slugs.indexOf(slug)===-1) state.slugs.push(slug);
-  renderTabs(state.slugs, slug);
+  if(id&&state.tabs.some(function(t){ return t.id===id; })){
+    state.active=id;
+  }else{
+    var tab={id:newTabId(), slug:slug};
+    state.tabs.push(tab);
+    state.active=tab.id;
+  }
+  renderTabs(state);
   var meta=lessonMeta(slug);
-  if(meta) showLesson(meta, false);
+  if(meta) showLesson(meta, state.active, false);
 });
 
 fetch(rootUrl('chapters.json')).then(function(r){ return r.json(); }).then(function(data){
   catalog=data;
   var state=tabState();
-  renderTabs(state.slugs, CHAPTER);
+  if(!state.tabs.some(function(t){ return t.id===state.active && t.slug===CHAPTER; })){
+    var existing=state.tabs.filter(function(t){ return t.slug===CHAPTER; })[0];
+    if(existing) state.active=existing.id;
+    else{
+      var tab={id:newTabId(), slug:CHAPTER};
+      state.tabs.push(tab);
+      state.active=tab.id;
+    }
+  }
+  renderTabs(state);
 }).catch(function(){
-  renderTabs([CHAPTER], CHAPTER);
+  var id=newTabId();
+  renderTabs({tabs:[{id:id, slug:CHAPTER}], active:id});
 });
 
 bindPane(true);
