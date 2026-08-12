@@ -141,26 +141,26 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 .window::before{
   content:""; position:absolute; inset:0; z-index:500; pointer-events:none;
   background:
-    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--accent-2) 24%, transparent) 0 2px, transparent 2px 5px),
-    radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.3) 100%);
+    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--accent-2) 10%, transparent) 0 2px, transparent 2px 5px),
+    radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,.16) 100%);
   animation:crt-flicker 1.5s infinite;
 }
 .window::after{
-  content:""; position:absolute; top:-30%; left:0; width:100%; height:6px; z-index:501; pointer-events:none;
-  background:linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--accent-2) 52%, transparent) 50%, transparent 100%);
+  content:""; position:absolute; top:-30%; left:0; width:100%; height:3px; z-index:501; pointer-events:none;
+  background:linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--accent-2) 22%, transparent) 50%, transparent 100%);
   animation:crt-sweep 12s linear infinite;
   filter:blur(1.5px); mix-blend-mode:screen;
 }
 @keyframes crt-flicker{
   0%, 100%{ opacity:1; }
-  10%{ opacity:.974; }
-  20%{ opacity:.994; }
-  30%{ opacity:.96; }
-  40%{ opacity:.984; }
-  50%{ opacity:.967; }
+  10%{ opacity:.992; }
+  20%{ opacity:.998; }
+  30%{ opacity:.988; }
+  40%{ opacity:.996; }
+  50%{ opacity:.99; }
   60%{ opacity:1; }
-  70%{ opacity:.95; }
-  80%{ opacity:.987; }
+  70%{ opacity:.985; }
+  80%{ opacity:.997; }
 }
 @keyframes crt-sweep{
   0%{ top:-30%; }
