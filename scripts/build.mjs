@@ -219,9 +219,7 @@ const renderPage = (chapter, content, base) => {
     "{{BASE}}": base,
     "{{CHAPTER_SLUG}}": chapter?.slug || "home",
     "{{FIND_PLACEHOLDER}}": `grep ${file}…`,
-    "{{TYPED_CMD}}": chapter ? `cat chapters/${file}` : "ls ~/tutorials",
-    "{{FETCH_OS}}": chapter ? `Linux Tutorials Book — ch.${chapter.num}` : "Linux Tutorials Book",
-    "{{PACKAGE_COUNT}}": String(chapters.length)
+    "{{TYPED_CMD}}": chapter ? `cat chapters/${file}` : "ls ~/tutorials"
   };
   let html = template;
   for (const [key, value] of Object.entries(replacements)) html = html.replaceAll(key, value);

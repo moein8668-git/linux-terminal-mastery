@@ -105,13 +105,12 @@ document.addEventListener('click',function(e){
 
 /* ---------- themes ---------- */
 var KEY='lt-theme', sbTheme=document.getElementById('sbTheme'),
-    fetchTheme=document.getElementById('fetchTheme'), aboutTheme=document.getElementById('aboutTheme'),
+    aboutTheme=document.getElementById('aboutTheme'),
     radios=Array.prototype.slice.call(document.querySelectorAll('[role="menuitemradio"]'));
 function currentTheme(){ return document.documentElement.getAttribute('data-theme')||'dracula'; }
 function applyTheme(t,persist){
   document.documentElement.setAttribute('data-theme',t);
   if(sbTheme) sbTheme.textContent=t;
-  if(fetchTheme) fetchTheme.textContent=t;
   if(aboutTheme) aboutTheme.textContent=t;
   radios.forEach(function(r){ r.setAttribute('aria-checked', r.dataset.t===t?'true':'false'); });
   if(persist){ try{ localStorage.setItem(KEY,t); }catch(e){} }
@@ -296,13 +295,11 @@ function onScroll(){
 pane.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(onScroll); } },{passive:true});
 onScroll();
 
-/* ---------- clock + uptime ---------- */
-var sbTime=document.getElementById('sbTime'), fetchUp=document.getElementById('fetchUp'), t0=Date.now();
+/* ---------- clock ---------- */
+var sbTime=document.getElementById('sbTime');
 function tick(){
   var d=new Date();
   if(sbTime) sbTime.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-  var secs=Math.floor((Date.now()-t0)/1000), m=Math.floor(secs/60), s=secs%60;
-  if(fetchUp) fetchUp.textContent=(m?m+' min ':'')+s+' secs';
 }
 tick(); setInterval(tick,1000);
 
