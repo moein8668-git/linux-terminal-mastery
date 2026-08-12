@@ -1,5 +1,7 @@
 name = "linux-terminal-mastery"
 compatibility_date = "2026-08-12"
+main = "src/worker.js"
 
 [assets]
 directory = "./dist"
+binding = "ASSETS"

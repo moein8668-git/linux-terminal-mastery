@@ -87,6 +87,7 @@
       <button class="mi" aria-haspopup="menu" aria-expanded="false">Settings</button>
       <div class="menu-pop" role="menu" hidden>
         <button class="pop-item" role="menuitemcheckbox" aria-checked="true" data-act="scan">CRT scanlines</button>
+        <button class="pop-item" role="menuitem" data-act="chatbot-settings">Chatbot Settings</button>
       </div>
     </div>
     <div class="mi-wrap">
@@ -158,6 +159,7 @@
   </footer>
 
   <div id="toast" role="status" dir="ltr"></div>
+  <button id="askAi" class="ask-ai" type="button" hidden>✦ Ask AI</button>
 </div>
 
 <div class="modal" id="aboutModal" hidden>
@@ -175,6 +177,43 @@
          <kbd>↑</kbd> <kbd>↓</kbd> — navigate menus</p>
     </div>
     <div class="modal-foot"><button class="m-btn" data-close>[ close ]</button></div>
+  </div>
+</div>
+
+<div class="modal" id="chatSettingsModal" hidden>
+  <div class="modal-back" data-close-chat-settings></div>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="chatSettingsTitle">
+    <div class="modal-head"><span id="chatSettingsTitle">chatbot settings</span><button class="m-x" data-close-chat-settings aria-label="close">✕</button></div>
+    <form class="modal-body chat-settings" id="chatSettingsForm">
+      <label>Provider
+        <select id="chatProvider">
+          <option value="google">Google AI Studio / Gemini</option>
+          <option value="openai-compatible">Custom OpenAI-compatible</option>
+        </select>
+      </label>
+      <label>Model
+        <select id="chatModel">
+          <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+          <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+          <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+          <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+        </select>
+      </label>
+      <label id="customModelRow" hidden>Custom model ID
+        <input id="chatCustomModel" type="text" placeholder="model-name">
+      </label>
+      <label id="customEndpointRow" hidden>API base URL
+        <input id="chatBaseUrl" type="url" placeholder="https://api.example.com/v1">
+      </label>
+      <label>Personal API key
+        <input id="chatApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="kept only in this browser tab">
+      </label>
+      <label>Prompt language
+        <select id="chatLanguage"><option value="fa">فارسی</option><option value="en">English</option></select>
+      </label>
+      <p class="security-note">Your key is sent only with your request through this site’s proxy. It is not saved to the repository or stored by the server.</p>
+      <button class="m-btn" type="submit">[ save settings ]</button>
+    </form>
   </div>
 </div>
 
