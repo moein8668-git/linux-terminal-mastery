@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="dracula">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>{{TITLE}} · Linux Terminal Mastery</title>
+  <link rel="stylesheet" href="{{BASE}}styles.css">
+</head>
+<body>
+  <div class="window">
+    <header class="titlebar"><span class="prompt-icon">&gt;_</span><strong>linux-terminal-mastery</strong><span class="path">~/tutorials</span><button id="themeButton" type="button" title="تغییر پوسته">◐</button></header>
+    <nav class="menubar" aria-label="منوی اصلی">
+      <a href="{{BASE}}" class="menu-link">خانه</a>
+      <button class="menu-link" type="button" data-menu="chaptersMenu">فصل‌ها⌄</button>
+      <button class="menu-link" type="button" data-menu="toolsMenu">ابزارها⌄</button>
+      <div class="menu-panel" id="chaptersMenu" hidden><input id="chapterSearch" type="search" placeholder="جستجوی فصل‌ها…" aria-label="جستجوی فصل‌ها"><ul class="menu-chapters">{{CHAPTER_NAV}}</ul></div>
+      <div class="menu-panel tools" id="toolsMenu" hidden><button type="button" data-action="print">چاپ / ذخیره PDF</button><button type="button" data-action="copy">کپی کدهای این فصل</button><button type="button" data-action="top">رفتن به ابتدای صفحه</button></div>
+      <span class="menu-spacer"></span><a class="github-link" href="https://github.com/moein8668-git/linux-terminal-mastery" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </nav>
+    <div class="layout">
+      <main class="content" id="content">
+        <div class="terminal-line"><span>user@linux</span>:<b>~/tutorials</b>$ cat {{CHAPTER_FILE}}</div>
+        <header class="document-head" dir="rtl">
+          <div class="eyebrow">UTF-8 · markdown</div>
+          <h1>{{TITLE}}</h1>
+          <div class="tags" aria-label="برچسب‌های فصل">{{TAGS}}</div>
+        </header>
+        <article class="markdown" dir="rtl">{{CONTENT}}</article>
+      </main>
+      <aside class="sidebar" aria-label="فهرست فصل‌ها">
+        <div class="side-heading">$ tree tutorials</div>
+        <ul class="chapter-tree">{{CHAPTER_NAV}}</ul>
+        <div class="side-heading">$ tags</div>
+        <div class="tag-list">{{TAG_FILTERS}}</div>
+        <div class="side-heading">$ grep '^#' README.md</div>
+        <nav class="toc" id="toc" aria-label="فهرست مطالب"></nav>
+      </aside>
+    </div>
+    <footer class="statusbar"><span>NORMAL</span><span id="progress">0%</span><span class="grow"></span><span id="clock">--:--</span><span>linux tutorials</span></footer>
+  </div>
+  <script>window.SITE_BASE = "{{BASE}}"; window.CURRENT_CHAPTER = "{{CHAPTER_SLUG}}";</script>
+  <script src="{{BASE}}app.js" defer></script>
+</body>
+</html>
