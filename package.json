@@ -2,6 +2,9 @@
   "name": "linux-terminal-mastery-site",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "npm run build"
