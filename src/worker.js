@@ -37,7 +37,7 @@ async function handleChat(request) {
     return json({ error: "Invalid JSON" }, 400);
   }
 
-  const { provider, model, apiKey, baseUrl, messages } = input || {};
+  const { provider, model, apiKey, baseUrl, messages, stream = false } = input || {};
   if (!["google", "openai-compatible"].includes(provider)) return json({ error: "Unsupported provider" }, 400);
   if (typeof apiKey !== "string" || apiKey.length < 10 || apiKey.length > 500) return json({ error: "A valid personal API key is required" }, 400);
   if (typeof model !== "string" || !/^[\w.:-]{2,120}$/.test(model)) return json({ error: "Invalid model" }, 400);
@@ -56,7 +56,7 @@ async function handleChat(request) {
         "content-type": "application/json",
         authorization: `Bearer ${apiKey}`
       },
-      body: JSON.stringify({ model, messages, stream: false })
+      body: JSON.stringify({ model, messages, stream: Boolean(stream) })
     });
     const body = await upstream.text();
     return new Response(body, {
