@@ -172,6 +172,8 @@ await cp(join(sourceRoot, "styles.css"), join(outputRoot, "styles.css"));
 await cp(join(sourceRoot, "app.js"), join(outputRoot, "app.js"));
 await cp(join(sourceRoot, "_headers"), join(outputRoot, "_headers"));
 await cp(join(root, "Assets"), join(outputRoot, "Assets"), { recursive: true });
+await cp(join(root, "README.md"), join(outputRoot, "README.md"));
+await mkdir(join(outputRoot, "markdown"), { recursive: true });
 
 const treeHtml = (current, base) => chapters.map((chapter, i) => {
   const last = i === chapters.length - 1;
@@ -180,7 +182,7 @@ const treeHtml = (current, base) => chapters.map((chapter, i) => {
   const cls = currentPage ? ' class="cur" aria-current="page"' : "";
   const next = nextPage ? ' <span class="nx">✦ next</span>' : "";
   const href = `${base}chapters/${chapter.slug}/`;
-  return `<li><a href="${href}"${cls} data-chapter="${chapter.slug}" data-tags="${chapter.tags.join(",")}"><span class="br">${last ? "└──" : "├──"}</span> ${escapeHtml(chapter.file)}${next}</a><span class="fa">${escapeHtml(chapter.short)}</span></li>`;
+  return `<li><a href="${href}"${cls} data-chapter="${chapter.slug}" data-tags="${chapter.tags.join(",")}" target="_blank" rel="noopener"><span class="br">${last ? "└──" : "├──"}</span> ${escapeHtml(chapter.file)}${next}</a><span class="fa">${escapeHtml(chapter.short)}</span></li>`;
 }).join("\n        ");
 
 const pagerHtml = (chapter, base) => {
@@ -219,7 +221,8 @@ const renderPage = (chapter, content, base) => {
     "{{BASE}}": base,
     "{{CHAPTER_SLUG}}": chapter?.slug || "home",
     "{{FIND_PLACEHOLDER}}": `grep ${file}…`,
-    "{{TYPED_CMD}}": chapter ? `cat chapters/${file}` : "ls ~/tutorials"
+    "{{TYPED_CMD}}": chapter ? `cat chapters/${file}` : "ls ~/tutorials",
+    "{{DOWNLOAD_URL}}": chapter ? `${base}markdown/${file}` : `${base}README.md`
   };
   let html = template;
   for (const [key, value] of Object.entries(replacements)) html = html.replaceAll(key, value);
@@ -234,6 +237,7 @@ for (const chapter of chapters) {
   const content = renderMarkdown(body, { path: `~/ch-${chapter.num}`, lab: false });
   const dir = join(outputRoot, "chapters", chapter.slug);
   await mkdir(dir, { recursive: true });
+  await writeFile(join(outputRoot, "markdown", chapter.file), chapter.markdown);
   await writeFile(join(dir, "index.html"), renderPage(chapter, content, "../../"));
 }
 

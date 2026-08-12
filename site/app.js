@@ -139,17 +139,12 @@ var zoom=1;
 function setZoom(z){ zoom=Math.min(1.5,Math.max(.75,z)); pane.style.setProperty('--zoom',zoom); }
 
 /* ---------- settings toggles ---------- */
-var miScan=document.querySelector('[data-act="scan"]'), miBlink=document.querySelector('[data-act="blinkc"]');
+var miScan=document.querySelector('[data-act="scan"]');
 function setScan(on){ document.documentElement.dataset.scan=on?'on':'off';
   if(miScan) miScan.setAttribute('aria-checked',on?'true':'false');
   try{ localStorage.setItem('lt-scan',on?'1':'0'); }catch(e){} }
-function setBlink(on){ document.documentElement.dataset.blink=on?'on':'off';
-  if(miBlink) miBlink.setAttribute('aria-checked',on?'true':'false');
-  try{ localStorage.setItem('lt-blink',on?'1':'0'); }catch(e){} }
 if(miScan) miScan.addEventListener('click',function(){ setScan(miScan.getAttribute('aria-checked')!=='true'); });
-if(miBlink) miBlink.addEventListener('click',function(){ setBlink(miBlink.getAttribute('aria-checked')!=='true'); });
 setScan((function(){ try{ return localStorage.getItem('lt-scan')!=='0'; }catch(e){ return true; } })());
-setBlink((function(){ try{ return localStorage.getItem('lt-blink')!=='0'; }catch(e){ return true; } })());
 
 /* ---------- find ---------- */
 var findbar=document.getElementById('findbar'), findInput=document.getElementById('findInput'),
@@ -241,8 +236,14 @@ if(modal) modal.querySelectorAll('[data-close]').forEach(function(el){ el.addEve
 document.querySelectorAll('[data-act]').forEach(function(el){
   var act=el.dataset.act;
   el.addEventListener('click',function(){
-    if(act==='print'){ closeMenus(); window.print(); }
-    else if(act==='newtab'){ closeMenus(); location.href=SITE_BASE||'/'; }
+    if(act==='download'){
+      var link=document.createElement('a');
+      link.href=el.dataset.downloadUrl;
+      link.download=el.dataset.downloadUrl.split('/').pop();
+      document.body.appendChild(link); link.click(); link.remove();
+      closeMenus(); toast('✓ lesson downloaded');
+    }
+    else if(act==='newtab'){ closeMenus(); window.open(SITE_BASE||'/', '_blank', 'noopener'); }
     else if(act==='exit'){ closeMenus(); toast('logout — nice try :)'); }
     else if(act==='copyall'){
       var raws=Array.prototype.map.call(document.querySelectorAll('code.cm'),function(c){ return c.dataset.raw||c.textContent; });
@@ -337,6 +338,13 @@ document.querySelectorAll('.tag[data-tag]').forEach(function(tagEl){
       var tags=(a&&a.getAttribute('data-tags')||'').split(',');
       li.hidden=tags.indexOf(tag)===-1;
     });
+  });
+});
+
+/* Chapter links open as independent lesson tabs so several lessons can stay available. */
+document.querySelectorAll('.tree a[data-chapter]').forEach(function(link){
+  link.addEventListener('click',function(){
+    toast('✓ opening '+link.textContent.trim());
   });
 });
 })();
