@@ -10,7 +10,7 @@
 (function(){
   try{
     var t=localStorage.getItem('lt-theme');
-    var ok=['dracula','nord','gruvbox','monokai','tokyo-night','solarized-light','matrix'];
+    var ok=['dracula','nord','gruvbox','monokai','tokyo-night','solarized-light','matrix','cyberpunk','everforest'];
     if(t&&ok.indexOf(t)!==-1)document.documentElement.setAttribute('data-theme',t);
   }catch(e){}
 })();
@@ -41,7 +41,7 @@
     <div class="mi-wrap">
       <button class="mi" aria-haspopup="menu" aria-expanded="false">File</button>
       <div class="menu-pop" role="menu" hidden>
-        <button class="pop-item" role="menuitem" data-act="print">Print / Save as PDF… <span class="kbd">⎙</span></button>
+        <button class="pop-item" role="menuitem" data-act="download" data-download-url="{{DOWNLOAD_URL}}">Download current lesson (.md)</button>
         <button class="pop-item" role="menuitem" data-act="newtab">New Tab</button>
         <div class="pop-sep" role="separator"></div>
         <button class="pop-item" role="menuitem" data-act="exit">Exit</button>
@@ -70,6 +70,8 @@
         <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="tokyo-night">tokyo-night</button>
         <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="solarized-light">solarized-light</button>
         <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="matrix">matrix</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="cyberpunk">cyberpunk</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="everforest">everforest</button>
       </div>
     </div>
     <div class="mi-wrap">
@@ -84,7 +86,6 @@
       <button class="mi" aria-haspopup="menu" aria-expanded="false">Settings</button>
       <div class="menu-pop" role="menu" hidden>
         <button class="pop-item" role="menuitemcheckbox" aria-checked="true" data-act="scan">CRT scanlines</button>
-        <button class="pop-item" role="menuitemcheckbox" aria-checked="true" data-act="blinkc">Blinking cursor</button>
       </div>
     </div>
     <div class="mi-wrap">
@@ -102,12 +103,8 @@
   </nav>
 
   <div class="tabbar">
-    <div class="tab active">
-      <span class="dot" aria-hidden="true"></span>
-      <span class="tx">user@linux-tutorials: {{TAB_LABEL}}</span>
-      <span class="tclose" aria-hidden="true">✕</span>
-    </div>
-    <button class="tab-add" title="new tab" data-act="newtab">+</button>
+    <div class="tabstrip" id="tabstrip"></div>
+    <button class="tab-add" id="tabAdd" type="button" title="new tab">+</button>
     <button class="side-toggle" id="sideToggle" aria-expanded="false" aria-controls="sidebar">≡ sidebar</button>
   </div>
 
@@ -121,7 +118,7 @@
       </div>
 
       <header class="block rv" dir="rtl">
-        <p class="filepath-line">{{FILEPATH}}</p>
+        <p class="filepath-line">{{FILEPATH}} <a class="dl-link" id="downloadLink" href="{{DOWNLOAD_URL}}" download="{{CHAPTER_FILE}}">⬇ download {{CHAPTER_FILE}}</a></p>
         <h1 id="doc-title">{{CHAPTER_TITLE}}</h1>
         <p class="subtitle" lang="en">{{SUBTITLE}}</p>
         <div class="tags" aria-label="برچسب‌ها">{{TAGS}}</div>
@@ -175,8 +172,6 @@
       <p><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> — find in chapter<br>
          <kbd>Esc</kbd> — close menus / dialogs<br>
          <kbd>↑</kbd> <kbd>↓</kbd> — navigate menus</p>
-      <p class="man-h">See Also</p>
-      <p>apt(8), dpkg(1), konsole(1)</p>
     </div>
     <div class="modal-foot"><button class="m-btn" data-close>[ close ]</button></div>
   </div>
@@ -185,6 +180,15 @@
 <script>
 window.SITE_BASE = "{{BASE}}";
 window.CURRENT_CHAPTER = "{{CHAPTER_SLUG}}";
+window.SITE = {
+  base: "{{BASE}}",
+  slug: "{{CHAPTER_SLUG}}",
+  file: "{{CHAPTER_FILE}}",
+  tab: "{{TAB_LABEL}}",
+  title: "{{CHAPTER_TITLE}}",
+  path: "{{TITLEBAR_PATH}}",
+  download: "{{DOWNLOAD_URL}}"
+};
 </script>
 <script src="{{BASE}}app.js" defer></script>
 </body>

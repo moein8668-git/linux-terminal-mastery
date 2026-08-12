@@ -182,7 +182,7 @@ const treeHtml = (current, base) => chapters.map((chapter, i) => {
   const cls = currentPage ? ' class="cur" aria-current="page"' : "";
   const next = nextPage ? ' <span class="nx">✦ next</span>' : "";
   const href = `${base}chapters/${chapter.slug}/`;
-  return `<li><a href="${href}"${cls} data-chapter="${chapter.slug}" data-tags="${chapter.tags.join(",")}" target="_blank" rel="noopener"><span class="br">${last ? "└──" : "├──"}</span> ${escapeHtml(chapter.file)}${next}</a><span class="fa">${escapeHtml(chapter.short)}</span></li>`;
+  return `<li><a href="${href}"${cls} data-chapter="${chapter.slug}" data-tags="${chapter.tags.join(",")}"><span class="br">${last ? "└──" : "├──"}</span> ${escapeHtml(chapter.file)}${next}</a><span class="fa">${escapeHtml(chapter.short)}</span></li>`;
 }).join("\n        ");
 
 const pagerHtml = (chapter, base) => {
@@ -249,5 +249,25 @@ ${chapters.map((chapter) => `- [${chapter.title}](chapters/${chapter.slug}/)`).j
 `;
 const homeContent = renderMarkdown(homeBody, { path: "~/tutorials", lab: false });
 await writeFile(join(outputRoot, "index.html"), renderPage(null, homeContent, ""));
+await writeFile(join(outputRoot, "chapters.json"), JSON.stringify({
+  home: {
+    slug: "home",
+    tab: "home",
+    file: "README.md",
+    title: "Linux Terminal Mastery",
+    path: "~/tutorials",
+    url: "",
+    download: "README.md"
+  },
+  chapters: chapters.map((chapter) => ({
+    slug: chapter.slug,
+    tab: `chapter-${chapter.num}`,
+    file: chapter.file,
+    title: chapter.title,
+    path: `~/tutorials/${chapter.folder.toLowerCase()}`,
+    url: `chapters/${chapter.slug}/`,
+    download: `markdown/${chapter.file}`
+  }))
+}, null, 2) + "\n");
 
 console.log(`Built ${chapters.length} chapters in ${relative(root, outputRoot)}/`);

@@ -4,8 +4,18 @@ document.documentElement.classList.add('js');
 var win=document.getElementById('win'), pane=document.getElementById('pane');
 if(!win||!pane) return;
 var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-var SITE_BASE=window.SITE_BASE||'./';
-var CHAPTER=window.CURRENT_CHAPTER||'home';
+var SITE=window.SITE||{};
+var SITE_BASE=SITE.base||window.SITE_BASE||'./';
+var CHAPTER=SITE.slug||window.CURRENT_CHAPTER||'home';
+var catalog=null;
+var heads=[], segs=[], tocLinks=[];
+
+function rootUrl(path){
+  return new URL(path||'', new URL(SITE_BASE||'./', location.href)).href;
+}
+function lessonUrl(slug){
+  return slug==='home' ? rootUrl('') : rootUrl('chapters/'+slug+'/');
+}
 
 /* ---------- toast ---------- */
 var toastEl=document.getElementById('toast'), toastT;
@@ -15,7 +25,7 @@ function toast(msg){
   clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.classList.remove('show'); },2400);
 }
 
-/* ---------- bash highlight (adds $ prompt per line) ---------- */
+/* ---------- bash highlight ---------- */
 var RE=/(#[^\n]*)|("(?:[^"\n])*"|'(?:[^'\n])*')|(\$\{[^}\n]*\}|\$[A-Za-z_]\w*)|([\w./-]+\.(?:deb|rpm|tar|gz|tgz|sh|conf|service)\b)|(^|[ \t])(--?[A-Za-z][\w-]*)|\b(sudo|apt-get|apt|dpkg|dnf|yum|pacman|git|curl|wget|python3|python|tree|cat|man|bash|zsh|ls|cd|pwd|chmod|chown|chgrp|mkdir|rmdir|rm|cp|mv|touch|nano|vim|vi|ssh|scp|sftp|sshd|systemctl|journalctl|ps|top|htop|kill|killall|ip|ss|ping|traceroute|ufw|useradd|usermod|userdel|passwd|groupadd|crontab|find|grep|awk|sed|cut|sort|uniq|xargs|tar|gzip|df|du|mount|umount|fdisk|lsblk|free|uname|whoami|who|w|history|alias|tmux|echo|printf|head|tail|less|more|wc|tee|export|source|env|which|hostnamectl|rsync|dd|mkfs|blkid|nginx|openssl|chmod)\b|\b(install|remove|purge|update|upgrade|search|show|list|autoremove|clean|enable|disable|start|stop|restart|status|reload|edit)\b|\b(package-name|keyword|username|hostname|filename|ip-address)\b|\b(\d+(?:\.\d+)*)\b/gm;
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function hlLine(line){
@@ -32,15 +42,16 @@ function hlLine(line){
     return m;
   });
 }
-document.querySelectorAll('code.cm').forEach(function(c){
-  var raw=c.textContent.replace(/\n$/,'');
-  c.dataset.raw=raw;
-  c.innerHTML=raw.split('\n').map(function(l){
-    return '<span class="tk-pr">$</span> '+hlLine(l);
-  }).join('\n');
-});
+function highlightCodes(){
+  pane.querySelectorAll('code.cm').forEach(function(c){
+    if(c.dataset.raw) return;
+    var raw=c.textContent.replace(/\n$/,'');
+    c.dataset.raw=raw;
+    c.innerHTML=raw.split('\n').map(function(l){ return '<span class="tk-pr">$</span> '+hlLine(l); }).join('\n');
+  });
+}
 
-/* ---------- copy buttons ---------- */
+/* ---------- copy ---------- */
 function copyText(t){
   if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
   return new Promise(function(res){
@@ -51,15 +62,19 @@ function copyText(t){
     ta.remove(); res();
   });
 }
-document.querySelectorAll('.copy').forEach(function(btn){
-  btn.addEventListener('click',function(){
-    var code=btn.closest('.term-mini').querySelector('code.cm');
-    copyText(code.dataset.raw||code.textContent).then(function(){
-      btn.textContent='copied ✓'; btn.classList.add('ok');
-      setTimeout(function(){ btn.textContent='copy'; btn.classList.remove('ok'); },1400);
+function bindCopy(){
+  pane.querySelectorAll('.copy').forEach(function(btn){
+    if(btn.dataset.bound) return;
+    btn.dataset.bound='1';
+    btn.addEventListener('click',function(){
+      var code=btn.closest('.term-mini').querySelector('code.cm');
+      copyText(code.dataset.raw||code.textContent).then(function(){
+        btn.textContent='copied ✓'; btn.classList.add('ok');
+        setTimeout(function(){ btn.textContent='copy'; btn.classList.remove('ok'); },1400);
+      });
     });
   });
-});
+}
 
 /* ---------- menubar ---------- */
 var wraps=Array.prototype.slice.call(document.querySelectorAll('.mi-wrap'));
@@ -138,7 +153,7 @@ syncSide();
 var zoom=1;
 function setZoom(z){ zoom=Math.min(1.5,Math.max(.75,z)); pane.style.setProperty('--zoom',zoom); }
 
-/* ---------- settings toggles ---------- */
+/* ---------- settings ---------- */
 var miScan=document.querySelector('[data-act="scan"]');
 function setScan(on){ document.documentElement.dataset.scan=on?'on':'off';
   if(miScan) miScan.setAttribute('aria-checked',on?'true':'false');
@@ -149,13 +164,15 @@ setScan((function(){ try{ return localStorage.getItem('lt-scan')!=='0'; }catch(e
 /* ---------- find ---------- */
 var findbar=document.getElementById('findbar'), findInput=document.getElementById('findInput'),
     findRes=document.getElementById('findRes'), sbMode=document.getElementById('sbMode');
-var heads=Array.prototype.slice.call(pane.querySelectorAll('h2'));
 function offsetInPane(el){
   return el.getBoundingClientRect().top - pane.getBoundingClientRect().top + pane.scrollTop;
 }
 function segText(h){ var t=h.textContent, n=h.nextElementSibling;
   while(n&&n.tagName!=='H2'){ t+=' '+n.textContent; n=n.nextElementSibling; } return t; }
-var segs=heads.map(function(h){ var t=segText(h); return {h:h, raw:t, low:t.toLowerCase()}; });
+function refreshHeads(){
+  heads=Array.prototype.slice.call(pane.querySelectorAll('h2'));
+  segs=heads.map(function(h){ var t=segText(h); return {h:h, raw:t, low:t.toLowerCase()}; });
+}
 function openFind(){ closeMenus(); findbar.hidden=false; findInput.focus(); if(sbMode) sbMode.textContent='FIND'; }
 function hideFind(){ findbar.hidden=true; findRes.hidden=true; if(sbMode) sbMode.textContent='NORMAL'; }
 function runFind(){
@@ -232,21 +249,25 @@ function openAbout(){ closeMenus(); modal.hidden=false; lastFocus=document.activ
 function closeAbout(){ if(modal.hidden) return; modal.hidden=true; if(lastFocus) lastFocus.focus(); }
 if(modal) modal.querySelectorAll('[data-close]').forEach(function(el){ el.addEventListener('click',closeAbout); });
 
+function downloadLesson(){
+  var href=(document.getElementById('downloadLink')||{}).href||SITE.download;
+  if(!href){ toast('✗ no lesson file'); return; }
+  var link=document.createElement('a');
+  link.href=href;
+  link.download=SITE.file||'lesson.md';
+  document.body.appendChild(link); link.click(); link.remove();
+  toast('✓ '+link.download);
+}
+
 /* ---------- menu actions ---------- */
 document.querySelectorAll('[data-act]').forEach(function(el){
   var act=el.dataset.act;
   el.addEventListener('click',function(){
-    if(act==='download'){
-      var link=document.createElement('a');
-      link.href=el.dataset.downloadUrl;
-      link.download=el.dataset.downloadUrl.split('/').pop();
-      document.body.appendChild(link); link.click(); link.remove();
-      closeMenus(); toast('✓ lesson downloaded');
-    }
-    else if(act==='newtab'){ closeMenus(); window.open(SITE_BASE||'/', '_blank', 'noopener'); }
+    if(act==='download'){ downloadLesson(); closeMenus(); }
+    else if(act==='newtab'){ closeMenus(); openLesson('home', true); }
     else if(act==='exit'){ closeMenus(); toast('logout — nice try :)'); }
     else if(act==='copyall'){
-      var raws=Array.prototype.map.call(document.querySelectorAll('code.cm'),function(c){ return c.dataset.raw||c.textContent; });
+      var raws=Array.prototype.map.call(pane.querySelectorAll('code.cm'),function(c){ return c.dataset.raw||c.textContent; });
       copyText(raws.join('\n')).then(function(){ toast('✓ '+raws.length+' commands copied to clipboard'); });
       closeMenus();
     }
@@ -269,19 +290,23 @@ document.addEventListener('keydown',function(e){
 
 /* ---------- TOC + scrollspy ---------- */
 var tocList=document.getElementById('tocList');
-heads.forEach(function(h,i){
-  if(!h.id) h.id='sec-'+(i+1);
-  if(!tocList) return;
-  var li=document.createElement('li'), a=document.createElement('a');
-  a.className='toc-link'; a.href='#'+h.id; a.setAttribute('dir','rtl');
-  var no=document.createElement('span'); no.className='toc-no'; no.textContent='['+(i<9?'0':'')+(i+1)+']';
-  var tt=document.createElement('span'); tt.textContent=h.textContent;
-  a.appendChild(no); a.appendChild(tt); li.appendChild(a); tocList.appendChild(li);
-  a.addEventListener('click',function(e){ e.preventDefault(); jumpTo(h);
-    if(isMobile()){ win.classList.remove('side-open'); syncSide(); } });
-});
-var tocLinks=tocList?Array.prototype.slice.call(tocList.querySelectorAll('.toc-link')):[];
 var sbBar=document.getElementById('sbBar'), sbPct=document.getElementById('sbPct'), CELLS=12, ticking=false;
+function rebuildToc(){
+  refreshHeads();
+  if(!tocList) return;
+  tocList.innerHTML='';
+  heads.forEach(function(h,i){
+    if(!h.id) h.id='sec-'+(i+1);
+    var li=document.createElement('li'), a=document.createElement('a');
+    a.className='toc-link'; a.href='#'+h.id; a.setAttribute('dir','rtl');
+    var no=document.createElement('span'); no.className='toc-no'; no.textContent='['+(i<9?'0':'')+(i+1)+']';
+    var tt=document.createElement('span'); tt.textContent=h.textContent;
+    a.appendChild(no); a.appendChild(tt); li.appendChild(a); tocList.appendChild(li);
+    a.addEventListener('click',function(e){ e.preventDefault(); jumpTo(h);
+      if(isMobile()){ win.classList.remove('side-open'); syncSide(); } });
+  });
+  tocLinks=Array.prototype.slice.call(tocList.querySelectorAll('.toc-link'));
+}
 function onScroll(){
   var max=pane.scrollHeight-pane.clientHeight;
   var p=max>0?Math.min(1,Math.max(0,pane.scrollTop/max)):0;
@@ -294,7 +319,6 @@ function onScroll(){
   ticking=false;
 }
 pane.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(onScroll); } },{passive:true});
-onScroll();
 
 /* ---------- clock ---------- */
 var sbTime=document.getElementById('sbTime');
@@ -304,47 +328,189 @@ function tick(){
 }
 tick(); setInterval(tick,1000);
 
-/* ---------- typewriter opener ---------- */
-var typedEl=document.getElementById('typed');
-if(typedEl&&!reduced){
-  var cmd=typedEl.textContent; typedEl.textContent='';
-  var i=0, iv=setInterval(function(){ typedEl.textContent=cmd.slice(0,++i);
-    if(i>=cmd.length) clearInterval(iv); },24);
-}
-
-/* ---------- reveal ---------- */
-var blocks=document.querySelectorAll('.rv');
-if(reduced||!('IntersectionObserver' in window)){
-  blocks.forEach(function(b){ b.classList.add('in'); });
-}else{
-  var io=new IntersectionObserver(function(entries){
-    entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
-  },{root:pane, rootMargin:'0px 0px -6% 0px', threshold:0.04});
-  blocks.forEach(function(b){ io.observe(b); });
-}
-
-/* ---------- tag filter (header tags filter the chapter tree) ---------- */
-document.querySelectorAll('.tag[data-tag]').forEach(function(tagEl){
-  tagEl.style.cursor='pointer';
-  tagEl.addEventListener('click',function(){
-    var tag=tagEl.getAttribute('data-tag');
-    var active=tagEl.classList.contains('on');
-    document.querySelectorAll('.tag[data-tag]').forEach(function(el){ el.classList.remove('on'); });
-    document.querySelectorAll('.tree li').forEach(function(li){ li.hidden=false; });
-    if(active) return;
-    tagEl.classList.add('on');
-    document.querySelectorAll('.tree li').forEach(function(li){
-      var a=li.querySelector('a');
-      var tags=(a&&a.getAttribute('data-tags')||'').split(',');
-      li.hidden=tags.indexOf(tag)===-1;
+function bindLessonLinks(){
+  var links=Array.prototype.slice.call(document.querySelectorAll('.tree a[data-chapter], .pager-link'));
+  pane.querySelectorAll('a[href]').forEach(function(link){ links.push(link); });
+  links.forEach(function(link){
+    if(link.classList.contains('dl-link') || link.classList.contains('toc-link')) return;
+    var href=link.getAttribute('href')||'';
+    if(href.charAt(0)==='#') return;
+    var slug=link.getAttribute('data-chapter');
+    if(!slug){
+      var m=href.match(/chapters\/([^/]+)\/?/);
+      if(m) slug=m[1];
+      else if(/index\.html\/?$/.test(href) || href==='./' || href===SITE_BASE) slug='home';
+    }
+    if(!slug) return;
+    if(link.dataset.tabBound) return;
+    link.dataset.tabBound='1';
+    link.addEventListener('click',function(e){
+      if(link.getAttribute('aria-disabled')==='true') return;
+      e.preventDefault();
+      openLesson(slug, false);
     });
   });
+  document.querySelectorAll('.tag[data-tag]').forEach(function(tagEl){
+    tagEl.style.cursor='pointer';
+    if(tagEl.dataset.bound) return;
+    tagEl.dataset.bound='1';
+    tagEl.addEventListener('click',function(){
+      var tag=tagEl.getAttribute('data-tag');
+      var active=tagEl.classList.contains('on');
+      pane.querySelectorAll('.tag[data-tag]').forEach(function(el){ el.classList.remove('on'); });
+      document.querySelectorAll('.tree li').forEach(function(li){ li.hidden=false; });
+      if(active) return;
+      tagEl.classList.add('on');
+      document.querySelectorAll('.tree li').forEach(function(li){
+        var a=li.querySelector('a');
+        var tags=(a&&a.getAttribute('data-tags')||'').split(',');
+        li.hidden=tags.indexOf(tag)===-1;
+      });
+    });
+  });
+}
+
+function applyChrome(meta){
+  CHAPTER=meta.slug;
+  SITE.slug=meta.slug; SITE.file=meta.file; SITE.tab=meta.tab; SITE.title=meta.title; SITE.path=meta.path;
+  SITE.download=rootUrl(meta.download);
+  document.title=meta.title+' · linux-tutorials';
+  var titlebar=document.querySelector('.ttitle');
+  if(titlebar) titlebar.innerHTML='<b>user@linux-tutorials</b>: '+meta.path+' — linux-tutorials';
+  var sbFile=document.querySelector('.sb-file');
+  if(sbFile) sbFile.textContent=meta.file;
+  var dl=document.getElementById('downloadLink');
+  if(dl){ dl.href=SITE.download; dl.setAttribute('download', meta.file); dl.textContent='⬇ download '+meta.file; }
+  var fileBtn=document.querySelector('[data-act="download"]');
+  if(fileBtn) fileBtn.dataset.downloadUrl=SITE.download;
+  document.querySelectorAll('.tree a[data-chapter]').forEach(function(a){
+    a.classList.toggle('cur', a.getAttribute('data-chapter')===meta.slug);
+    if(a.getAttribute('data-chapter')===meta.slug) a.setAttribute('aria-current','page');
+    else a.removeAttribute('aria-current');
+  });
+}
+
+function bindPane(first){
+  highlightCodes();
+  bindCopy();
+  rebuildToc();
+  bindLessonLinks();
+  onScroll();
+  var typedEl=document.getElementById('typed');
+  if(first&&typedEl&&!reduced){
+    var cmd=typedEl.textContent; typedEl.textContent='';
+    var i=0, iv=setInterval(function(){ typedEl.textContent=cmd.slice(0,++i);
+      if(i>=cmd.length) clearInterval(iv); },24);
+  }
+  var blocks=pane.querySelectorAll('.rv');
+  if(reduced||!('IntersectionObserver' in window)){
+    blocks.forEach(function(b){ b.classList.add('in'); });
+  }else{
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    },{root:pane, rootMargin:'0px 0px -6% 0px', threshold:0.04});
+    blocks.forEach(function(b){ io.observe(b); });
+  }
+}
+
+/* ---------- in-page tabs ---------- */
+var tabstrip=document.getElementById('tabstrip');
+var TAB_KEY='lt-open-tabs';
+function lessonMeta(slug){
+  if(!catalog) return null;
+  if(slug==='home') return catalog.home;
+  return (catalog.chapters||[]).filter(function(c){ return c.slug===slug; })[0]||null;
+}
+function readTabs(){
+  try{ return JSON.parse(sessionStorage.getItem(TAB_KEY)||'[]'); }catch(e){ return []; }
+}
+function writeTabs(slugs, active){
+  try{ sessionStorage.setItem(TAB_KEY, JSON.stringify({slugs:slugs, active:active})); }catch(e){}
+}
+function tabState(){
+  var saved=readTabs();
+  var slugs=saved.slugs&&saved.slugs.length?saved.slugs.slice():[CHAPTER];
+  if(slugs.indexOf(CHAPTER)===-1) slugs.push(CHAPTER);
+  return {slugs:slugs, active:saved.active||CHAPTER};
+}
+function renderTabs(slugs, active){
+  if(!tabstrip) return;
+  tabstrip.innerHTML='';
+  slugs.forEach(function(slug){
+    var meta=lessonMeta(slug)||{slug:slug, tab:slug};
+    var btn=document.createElement('button');
+    btn.type='button'; btn.className='tab'+(slug===active?' active':'');
+    btn.dataset.slug=slug;
+    btn.innerHTML='<span class="dot" aria-hidden="true"></span><span class="tx">user@linux-tutorials: '+meta.tab+'</span><span class="tclose" data-close-tab="'+slug+'">✕</span>';
+    btn.addEventListener('click',function(e){
+      if(e.target.getAttribute('data-close-tab')) return;
+      openLesson(slug, false);
+    });
+    tabstrip.appendChild(btn);
+  });
+  tabstrip.querySelectorAll('[data-close-tab]').forEach(function(x){
+    x.addEventListener('click',function(e){
+      e.stopPropagation();
+      closeLesson(x.getAttribute('data-close-tab'));
+    });
+  });
+  writeTabs(slugs, active);
+}
+async function showLesson(meta, push){
+  if(meta.slug===CHAPTER && pane.querySelector('#doc-title')){
+    applyChrome(meta);
+    return;
+  }
+  var res=await fetch(lessonUrl(meta.slug));
+  var html=await res.text();
+  var doc=new DOMParser().parseFromString(html, 'text/html');
+  var next=doc.getElementById('pane');
+  if(!next) return;
+  pane.innerHTML=next.innerHTML;
+  applyChrome(meta);
+  bindPane(false);
+  pane.scrollTop=0;
+  if(push!==false) history.pushState({slug:meta.slug}, meta.title, lessonUrl(meta.slug));
+}
+async function openLesson(slug, forceNew){
+  var meta=lessonMeta(slug);
+  if(!meta){ location.href=lessonUrl(slug); return; }
+  var state=tabState();
+  if(forceNew || state.slugs.indexOf(slug)===-1){
+    if(state.slugs.indexOf(slug)===-1) state.slugs.push(slug);
+  }
+  state.active=slug;
+  renderTabs(state.slugs, slug);
+  await showLesson(meta, true);
+}
+function closeLesson(slug){
+  var state=tabState();
+  if(state.slugs.length<2){ toast('✗ last tab stays open'); return; }
+  state.slugs=state.slugs.filter(function(s){ return s!==slug; });
+  if(state.active===slug) state.active=state.slugs[state.slugs.length-1];
+  renderTabs(state.slugs, state.active);
+  var meta=lessonMeta(state.active);
+  if(meta) showLesson(meta, true);
+}
+
+var tabAdd=document.getElementById('tabAdd');
+if(tabAdd) tabAdd.addEventListener('click',function(){ openLesson('home', true); });
+window.addEventListener('popstate',function(){
+  var slug=(history.state&&history.state.slug)||CHAPTER;
+  var state=tabState();
+  if(state.slugs.indexOf(slug)===-1) state.slugs.push(slug);
+  renderTabs(state.slugs, slug);
+  var meta=lessonMeta(slug);
+  if(meta) showLesson(meta, false);
 });
 
-/* Chapter links open as independent lesson tabs so several lessons can stay available. */
-document.querySelectorAll('.tree a[data-chapter]').forEach(function(link){
-  link.addEventListener('click',function(){
-    toast('✓ opening '+link.textContent.trim());
-  });
+fetch(rootUrl('chapters.json')).then(function(r){ return r.json(); }).then(function(data){
+  catalog=data;
+  var state=tabState();
+  renderTabs(state.slugs, CHAPTER);
+}).catch(function(){
+  renderTabs([CHAPTER], CHAPTER);
 });
+
+bindPane(true);
 })();

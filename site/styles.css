@@ -84,6 +84,24 @@ html[data-theme="matrix"]{
   --syn-tool:#7dffa4; --syn-sub:#00ff41; --syn-flag:#00e0a8; --syn-str:#d6ffcc;
   --syn-cmt:#0f8f3f; --syn-num:#baffd1; --syn-var:#66ff99; --syn-ph:#1f9e50;
 }
+html[data-theme="cyberpunk"]{
+  --bg:#100b1c; --bg-glow:rgba(0,240,255,.16); --term:#19102b; --head:#160d25; --bar:rgba(16,11,28,.92);
+  --fg:#f5eaff; --fg-strong:#ffffff; --fg-dim:#c7a9e8; --fg-faint:#8064a6;
+  --accent:#ff2bd6; --accent-2:#00f6ff; --accent-3:#9b5cff; --warn:#ffe66d; --link:#61ff9a;
+  --border:#4a2870; --border-soft:#321b51; --code-bg:#120b20; --inline-bg:#342052; --sel:#542a78; --cursor:#00f6ff;
+  --shadow:0 24px 60px -12px rgba(0,0,0,.75); --scanline:.26; --vignette:.55; --glow:0 0 16px rgba(255,43,214,.35);
+  --syn-tool:#00f6ff; --syn-sub:#ff2bd6; --syn-flag:#ffe66d; --syn-str:#61ff9a;
+  --syn-cmt:#8064a6; --syn-num:#9b5cff; --syn-var:#ff9f43; --syn-ph:#a991c4;
+}
+html[data-theme="everforest"]{
+  --bg:#27352b; --bg-glow:rgba(167,192,128,.12); --term:#2f4033; --head:#29382e; --bar:rgba(39,53,43,.92);
+  --fg:#d3c6aa; --fg-strong:#f0ead6; --fg-dim:#b7bfa0; --fg-faint:#859275;
+  --accent:#e67e80; --accent-2:#a7c080; --accent-3:#d699b6; --warn:#dbbc7f; --link:#83c092;
+  --border:#4b5d4c; --border-soft:#3c4c3e; --code-bg:#26332a; --inline-bg:#405242; --sel:#526653; --cursor:#a7c080;
+  --shadow:0 24px 60px -12px rgba(10,20,12,.6); --scanline:.14; --vignette:.42; --glow:0 0 12px rgba(230,126,128,.22);
+  --syn-tool:#a7c080; --syn-sub:#e67e80; --syn-flag:#dbbc7f; --syn-str:#83c092;
+  --syn-cmt:#859275; --syn-num:#d699b6; --syn-var:#e69875; --syn-ph:#9da98d;
+}
 
 /* ================= BASE ================= */
 *,*::before,*::after{ box-sizing:border-box; border-radius:0 !important; }
@@ -96,10 +114,9 @@ body{
   transition:background .35s, color .35s;
 }
 body::before{ content:""; position:fixed; inset:0; z-index:90; pointer-events:none;
-  background:repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px);
-  opacity:var(--scanline); transition:opacity .3s; }
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.32) 0 1px, transparent 1px 3px);
+  mix-blend-mode:overlay; opacity:var(--scanline); transition:opacity .3s; }
 html[data-scan="off"] body::before{ opacity:0; }
-html[data-blink="off"] .cursor{ animation:none; }
 body::after{ content:""; position:fixed; inset:0; z-index:89; pointer-events:none;
   background:radial-gradient(120% 90% at 50% 40%, transparent 60%, rgba(0,0,0,.5));
   opacity:var(--vignette); }
@@ -176,19 +193,22 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 /* ---- tabbar ---- */
 .tabbar{ display:flex; align-items:stretch; gap:3px; padding:6px 8px 0; background:var(--head);
   border-bottom:1px solid var(--border); flex-shrink:0; }
+.tabstrip{ display:flex; align-items:stretch; gap:3px; flex:1; min-width:0; overflow-x:auto; scrollbar-width:thin; }
 .tab{ display:flex; align-items:center; gap:9px; padding:7px 14px; font-size:.76rem;
-  white-space:nowrap; max-width:340px; }
+  white-space:nowrap; max-width:340px; background:none; border:0; color:var(--fg-faint); cursor:pointer; font-family:inherit; }
 .tab.active{ background:var(--term); border:1px solid var(--border); border-bottom:0;
   color:var(--fg); margin-bottom:-1px; }
 .tab.active .tx{ overflow:hidden; text-overflow:ellipsis; }
 .tab .dot{ width:7px; height:7px; background:var(--accent-2); flex-shrink:0; }
-.tab .tclose{ color:var(--fg-faint); font-size:.7rem; }
+.tab .tclose{ color:var(--fg-faint); font-size:.7rem; border:0; background:none; cursor:pointer; padding:0 2px; font-family:inherit; }
+.tab .tclose:hover{ color:var(--fg); }
 .tab-add{ align-self:center; background:none; border:1px solid transparent; color:var(--fg-faint);
-  width:26px; height:26px; font-size:.9rem; cursor:pointer; }
+  width:26px; height:26px; font-size:.9rem; cursor:pointer; flex-shrink:0; }
 .tab-add:hover{ color:var(--fg-dim); border-color:var(--border); }
 .side-toggle{ display:none; margin-left:auto; align-self:center; background:none;
   border:1px solid var(--border); color:var(--fg-dim); font-size:.72rem; padding:4px 10px; cursor:pointer; }
 .side-toggle:hover{ color:var(--fg); border-color:var(--accent); }
+.dl-link{ display:inline-block; margin-inline-start:12px; color:var(--accent-2); border:1px solid var(--border); padding:1px 8px; font-size:.72rem; }
 
 /* ---- body grid: content left, sidebar RIGHT ---- */
 .body{ flex:1; min-height:0; display:grid; grid-template-columns:1fr 282px; position:relative; }
