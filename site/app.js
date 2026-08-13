@@ -412,7 +412,9 @@ function saveChatHistory(tabId){
 }
 function chatSettings(){
   try{
-    return Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
+    var value=Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
+    if(value.model==='gemini-3.1-pro-preview') value.model='gemini-3.1-pro';
+    return value;
   }catch(e){ return {provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}; }
 }
 function saveChatSettings(value){
@@ -449,19 +451,29 @@ async function sendChat(tabId, text){
   if(!text) return;
   var settings=chatSettings();
   if(!settings.apiKey){ openChatSettings(); toast('Add your personal API key first'); return; }
+  if(!settings.model || settings.model==='custom'){ openChatSettings(); toast('Choose or enter a model first'); return; }
+  if(settings.provider==='openai-compatible' && !settings.baseUrl){ openChatSettings(); toast('Add the custom API base URL first'); return; }
   appendChat(tabId,'user',text);
   var input=document.getElementById('chatInput'), send=document.querySelector('.chat-send');
   if(send) send.disabled=true;
   try{
     var response=await fetch(rootUrl('api/chat'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
-      provider:settings.provider, model:settings.model, baseUrl:settings.baseUrl, apiKey:settings.apiKey,
+      provider:settings.provider, model:settings.model.trim(), baseUrl:settings.baseUrl.trim(), apiKey:settings.apiKey.trim(),
       messages:chatMessages[tabId], stream:true
     })});
-    if(!response.ok){ var errorData=await response.json(); throw new Error(errorData.error||'Provider request failed'); }
+    if(!response.ok){ var errorData=await response.json().catch(function(){ return {}; }); throw new Error(errorData.error||'Provider request failed ('+response.status+')'); }
     var assistant={role:'assistant',content:'AI@linux-tutorials:~$ generating…'};
     chatMessages[tabId].push(assistant); saveChatHistory(tabId);
     renderChat(tabId); 
     if(!response.body) throw new Error('Streaming is not supported by this browser');
+    var contentType=response.headers.get('content-type')||'';
+    if(contentType.includes('application/json')){
+      var data=await response.json();
+      var direct=data.choices?.[0]?.message?.content||data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if(!direct) throw new Error('The provider returned no text');
+      assistant.content=direct; saveChatHistory(tabId); renderChat(tabId);
+      return;
+    }
     var reader=response.body.getReader(), decoder=new TextDecoder(), buffer='';
     while(true){
       var part=await reader.read(); if(part.done) break;
