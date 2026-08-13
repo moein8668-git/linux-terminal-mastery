@@ -6,7 +6,8 @@ if(!win||!pane) return;
 var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var SITE=window.SITE||{};
 var SITE_BASE=SITE.base||window.SITE_BASE||'./';
-var CHAPTER=SITE.slug||window.CURRENT_CHAPTER||'home';
+var INITIAL_CHAT=/\/chat\/?$/.test(location.pathname);
+var CHAPTER=INITIAL_CHAT?'chat':(SITE.slug||window.CURRENT_CHAPTER||'home');
 var catalog=null;
 var heads=[], segs=[], tocLinks=[];
 
@@ -266,7 +267,8 @@ document.querySelectorAll('[data-act]').forEach(function(el){
   var act=el.dataset.act;
   el.addEventListener('click',function(){
     if(act==='download'){ downloadLesson(); closeMenus(); }
-    else if(act==='newtab'){ closeMenus(); openLesson('home', true); }
+    else if(act==='newchat'){ closeMenus(); openLesson('chat', true); }
+    else if(act==='chathistory'){ closeMenus(); openLesson('chat-history', true); }
     else if(act==='exit'){ closeMenus(); toast('logout — nice try :)'); }
     else if(act==='copyall'){
       var raws=Array.prototype.map.call(pane.querySelectorAll('code.cm'),function(c){ return c.dataset.raw||c.textContent; });
@@ -403,7 +405,13 @@ function applyChrome(meta){
 }
 
 /* ---------- AI chat ---------- */
-var CHAT_KEY='lt-chat-settings', chatMessages={};
+var CHAT_KEY='lt-chat-settings', CHAT_HISTORY_KEY='lt-chat-history', chatMessages={};
+function loadChatHistory(tabId){
+  try{ return JSON.parse(sessionStorage.getItem(CHAT_HISTORY_KEY+':'+tabId)||'[]'); }catch(e){ return []; }
+}
+function saveChatHistory(tabId){
+  try{ sessionStorage.setItem(CHAT_HISTORY_KEY+':'+tabId, JSON.stringify(chatMessages[tabId]||[])); }catch(e){}
+}
 function chatSettings(){
   try{
     return Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
@@ -417,13 +425,21 @@ function promptForSelection(text, language){
   return `این بخش انتخاب‌شده از آموزش لینوکس را به زبان فارسی ساده و دقیق توضیح بده. اصطلاحات ناآشنا، کاربرد دستورها یا مفهوم اصلی را توضیح بده و یک مثال عملی کوتاه هم اضافه کن. فرض نکن کاربر دانش قبلی دارد.\n\nبخش انتخاب‌شده:\n${text}`;
 }
 function renderChat(tabId, prefill){
-  if(!chatMessages[tabId]) chatMessages[tabId]=[];
-  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI</h1><p class="chat-context">Ask about this tutorial. Your prompt is editable and is never sent automatically.</p></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
+  if(!chatMessages[tabId]) chatMessages[tabId]=loadChatHistory(tabId);
+  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI</h1></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
   var input=document.getElementById('chatInput');
   input.value=prefill||'';
   var list=document.getElementById('chatMessages');
   chatMessages[tabId].forEach(function(message){
-    var item=document.createElement('div'); item.className='chat-message '+message.role; item.textContent=message.content; list.appendChild(item);
+    var item=document.createElement('div'); item.className='chat-message '+message.role;
+    if(message.role==='assistant'){
+      var prompt=document.createElement('div'); prompt.className='chat-terminal-prompt';
+      prompt.textContent=message.pending?'AI@linux-tutorials:~$ generating…':'AI@linux-tutorials:~$ cat answer.md';
+      item.appendChild(prompt);
+      if(message.pending){ var cursor=document.createElement('span'); cursor.className='cursor'; prompt.appendChild(cursor); }
+    }
+    var body=document.createElement('div'); body.className='chat-message-body'; body.dir=/[\u0600-\u06ff]/.test(message.content)?'rtl':'ltr'; body.textContent=message.content; item.appendChild(body);
+    list.appendChild(item);
   });
   document.getElementById('chatForm').addEventListener('submit',function(e){
     e.preventDefault();
@@ -434,9 +450,17 @@ function renderChat(tabId, prefill){
 function appendChat(tabId, role, content){
   chatMessages[tabId]=chatMessages[tabId]||[];
   chatMessages[tabId].push({role:role, content:content});
+  saveChatHistory(tabId);
   renderChat(tabId);
   var list=document.getElementById('chatMessages');
   if(list) list.lastElementChild?.scrollIntoView({block:'nearest'});
+}
+function nameChatTab(tabId, prompt){
+  var state=tabState(), tab=state.tabs.filter(function(item){ return item.id===tabId; })[0];
+  if(tab && tab.slug==='chat' && !tab.title){
+    tab.title=prompt.replace(/\s+/g,' ').trim().slice(0,42)||'new chat';
+    writeTabs(state); renderTabs(state);
+  }
 }
 async function sendChat(tabId, text){
   if(!text) return;
@@ -444,8 +468,10 @@ async function sendChat(tabId, text){
   if(!settings.apiKey){ openChatSettings(); toast('Add your personal API key first'); return; }
   if(!settings.baseUrl){ openChatSettings(); toast('Add the provider API base URL first'); return; }
   appendChat(tabId,'user',text);
+  nameChatTab(tabId,text);
   var assistant={role:'assistant',content:''};
   chatMessages[tabId].push(assistant);
+  saveChatHistory(tabId);
   renderChat(tabId);
   var send=document.querySelector('.chat-send');
   if(send) send.disabled=true;
@@ -453,6 +479,7 @@ async function sendChat(tabId, text){
     if(settings.provider==='google'){
       await streamGemini(settings, chatMessages[tabId], function(text){
         assistant.content+=text;
+        saveChatHistory(tabId);
         renderChat(tabId);
       });
     }else{
@@ -467,9 +494,11 @@ async function sendChat(tabId, text){
       assistant.content=data.choices?.[0]?.message?.content||'';
     }
     if(!assistant.content) throw new Error('The provider returned no text');
+    saveChatHistory(tabId);
     renderChat(tabId);
   }catch(error){
     assistant.content='Error: '+error.message;
+    saveChatHistory(tabId);
     renderChat(tabId);
   }
   finally{ var button=document.querySelector('.chat-send'); if(button) button.disabled=false; }
@@ -577,6 +606,7 @@ var activeTabId=null;
 function lessonMeta(slug){
   if(!catalog) return null;
   if(slug==='chat') return {slug:'chat', tab:'chat', file:'chat', title:'Ask AI', path:'~/chat', download:''};
+  if(slug==='chat-history') return {slug:'chat-history', tab:'chat-history', file:'history', title:'Chat History', path:'~/chat/history', download:''};
   if(slug==='home') return catalog.home;
   return (catalog.chapters||[]).filter(function(c){ return c.slug===slug; })[0]||null;
 }
@@ -610,7 +640,7 @@ function renderTabs(state){
     var btn=document.createElement('button');
     btn.type='button'; btn.className='tab'+(tab.id===state.active?' active':'');
     btn.dataset.tabId=tab.id;
-    btn.innerHTML='<span class="dot" aria-hidden="true"></span><span class="tx">user@linux-tutorials: '+meta.tab+'</span><span class="tclose" data-close-tab="'+tab.id+'">✕</span>';
+    btn.innerHTML='<span class="dot" aria-hidden="true"></span><span class="tx">user@linux-tutorials: '+(tab.title||meta.tab)+'</span><span class="tclose" data-close-tab="'+tab.id+'">✕</span>';
     btn.addEventListener('click',function(e){
       if(e.target.getAttribute('data-close-tab')) return;
       activateTab(tab.id);
@@ -635,6 +665,11 @@ function renderTabs(state){
   activeTabId=state.active;
 }
 async function showLesson(meta, tabId, push){
+  if(meta.slug==='chat-history'){
+    renderChatHistory(tabId);
+    if(push!==false) history.pushState({slug:'chat-history', tab:tabId}, meta.title, rootUrl('chat/history/'));
+    return;
+  }
   if(meta.slug==='chat'){
     renderChat(tabId, null);
     if(push!==false) history.pushState({slug:'chat', tab:tabId}, meta.title, rootUrl('chat/'));
@@ -661,6 +696,18 @@ async function showLesson(meta, tabId, push){
     var address=new URL(lessonUrl(meta.slug), location.href);
     history.pushState({slug:meta.slug, tab:tabId}, meta.title, address.pathname+address.search+address.hash);
   }
+}
+function renderChatHistory(tabId){
+  var state=tabState();
+  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat / history</p><h1>Chat History</h1><p class="chat-context">Choose a chat to continue it. Chat names come from the first prompt.</p></header><div class="chat-history-list" id="chatHistoryList"></div></div>';
+  var list=document.getElementById('chatHistoryList');
+  state.tabs.filter(function(tab){ return tab.slug==='chat'; }).forEach(function(tab){
+    var button=document.createElement('button'); button.className='chat-history-item'; button.type='button';
+    button.textContent=tab.title||'new chat';
+    button.addEventListener('click',function(){ activateTab(tab.id); });
+    list.appendChild(button);
+  });
+  if(!list.children.length){ list.textContent='No chats in this browser session yet.'; }
 }
 async function openLesson(slug, forceNew, prefill){
   var meta=lessonMeta(slug);
@@ -714,7 +761,7 @@ function closeTab(id){
 }
 
 var tabAdd=document.getElementById('tabAdd');
-if(tabAdd) tabAdd.addEventListener('click',function(){ openLesson('home', true); });
+if(tabAdd) tabAdd.addEventListener('click',function(){ openLesson('chat', true); });
 window.addEventListener('popstate',function(){
   var slug=(history.state&&history.state.slug)||CHAPTER;
   var id=history.state&&history.state.tab;
@@ -734,6 +781,11 @@ window.addEventListener('popstate',function(){
 fetch(rootUrl('chapters.json')).then(function(r){ return r.json(); }).then(function(data){
   catalog=data;
   var state=tabState();
+  if(INITIAL_CHAT){
+    var chatTab={id:newTabId(), slug:'chat'};
+    state.tabs=[chatTab]; state.active=chatTab.id;
+    renderTabs(state); showLesson(lessonMeta('chat'), state.active, false); return;
+  }
   if(!state.tabs.some(function(t){ return t.id===state.active && t.slug===CHAPTER; })){
     var existing=state.tabs.filter(function(t){ return t.slug===CHAPTER; })[0];
     if(existing) state.active=existing.id;

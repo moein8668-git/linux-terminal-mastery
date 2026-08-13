@@ -250,6 +250,10 @@ ${chapters.map((chapter) => `- [${chapter.title}](chapters/${chapter.slug}/)`).j
 `;
 const homeContent = renderMarkdown(homeBody, { path: "~/tutorials", lab: false });
 await writeFile(join(outputRoot, "index.html"), renderPage(null, homeContent, ""));
+await mkdir(join(outputRoot, "chat"), { recursive: true });
+await writeFile(join(outputRoot, "chat", "index.html"), renderPage(null, homeContent, "../"));
+await mkdir(join(outputRoot, "chat", "history"), { recursive: true });
+await writeFile(join(outputRoot, "chat", "history", "index.html"), renderPage(null, homeContent, "../../"));
 await writeFile(join(outputRoot, "chapters.json"), JSON.stringify({
   home: {
     slug: "home",
