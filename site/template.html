@@ -43,7 +43,8 @@
       <button class="mi" aria-haspopup="menu" aria-expanded="false">File</button>
       <div class="menu-pop" role="menu" hidden>
         <button class="pop-item" role="menuitem" data-act="download" data-download-url="{{DOWNLOAD_URL}}">Download current lesson (.md)</button>
-        <button class="pop-item" role="menuitem" data-act="newtab">New Tab</button>
+        <button class="pop-item" role="menuitem" data-act="newchat">New Chat</button>
+        <button class="pop-item" role="menuitem" data-act="chathistory">Chat History</button>
         <div class="pop-sep" role="separator"></div>
         <button class="pop-item" role="menuitem" data-act="exit">Exit</button>
       </div>
@@ -196,7 +197,7 @@
           <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
           <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
           <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-          <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+          <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
         </select>
       </label>
       <label id="customModelRow" hidden>Custom model ID
@@ -211,7 +212,7 @@
       <label>Prompt language
         <select id="chatLanguage"><option value="fa">فارسی</option><option value="en">English</option></select>
       </label>
-      <p class="security-note">Your key is sent only with your request through this site’s proxy. It is not saved to the repository or stored by the server.</p>
+      <p class="security-note">Your API key is stored only in this browser tab and is sent directly from your machine to the provider. It is never sent to this site’s server. Regional Google API blocks may require a proxy or VPN.</p>
       <button class="m-btn" type="submit">[ save settings ]</button>
     </form>
   </div>
