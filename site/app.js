@@ -6,8 +6,7 @@ if(!win||!pane) return;
 var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var SITE=window.SITE||{};
 var SITE_BASE=SITE.base||window.SITE_BASE||'./';
-var INITIAL_CHAT=/\/chat\/?$/.test(location.pathname);
-var CHAPTER=INITIAL_CHAT?'chat':(SITE.slug||window.CURRENT_CHAPTER||'home');
+var CHAPTER=SITE.slug||window.CURRENT_CHAPTER||'home';
 var catalog=null;
 var heads=[], segs=[], tocLinks=[];
 
@@ -404,38 +403,27 @@ function applyChrome(meta){
 }
 
 /* ---------- AI chat ---------- */
-var CHAT_KEY='lt-chat-settings', CHAT_HISTORY_KEY='lt-chat-history', chatMessages={};
-function loadChatHistory(tabId){
-  try{ return JSON.parse(sessionStorage.getItem(CHAT_HISTORY_KEY+':'+tabId)||'[]'); }catch(e){ return []; }
-}
-function saveChatHistory(tabId){
-  try{ sessionStorage.setItem(CHAT_HISTORY_KEY+':'+tabId, JSON.stringify(chatMessages[tabId]||[])); }catch(e){}
-}
+var CHAT_KEY='lt-chat-settings', chatMessages={};
 function chatSettings(){
   try{
-    var value=Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
-    if(value.model==='gemini-3.1-pro-preview') value.model='gemini-3.1-pro';
-    return value;
+    return Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
   }catch(e){ return {provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}; }
 }
 function saveChatSettings(value){
   try{ sessionStorage.setItem(CHAT_KEY, JSON.stringify(value)); }catch(e){}
 }
 function promptForSelection(text, language){
-  if(language==='en') return `Explain this selected part of the Linux tutorial clearly. Break down every command character by character where useful: explain the command name, every option/flag, argument, path, operator, pipe, redirect, variable, and the order of execution. Define unfamiliar terms and include a small practical example. Do not assume prior knowledge.\n\nSelected part:\n${text}`;
-  return `این بخش انتخاب‌شده از آموزش لینوکس را به زبان فارسی ساده و دقیق توضیح بده. هر دستور را جزءبه‌جزء بررسی کن: نام دستور، تک‌تک گزینه‌ها و فلگ‌ها، آرگومان‌ها، مسیرها، عملگرها، pipe، redirect، متغیرها و ترتیب اجرا را توضیح بده. اصطلاحات ناآشنا را تعریف کن و یک مثال عملی کوتاه هم اضافه کن. فرض نکن کاربر دانش قبلی دارد.\n\nبخش انتخاب‌شده:\n${text}`;
+  if(language==='en') return `Explain this selected part of the Linux tutorial clearly. Define unfamiliar terms, explain what each command or concept does, and include a small practical example. Do not assume prior knowledge.\n\nSelected part:\n${text}`;
+  return `این بخش انتخاب‌شده از آموزش لینوکس را به زبان فارسی ساده و دقیق توضیح بده. اصطلاحات ناآشنا، کاربرد دستورها یا مفهوم اصلی را توضیح بده و یک مثال عملی کوتاه هم اضافه کن. فرض نکن کاربر دانش قبلی دارد.\n\nبخش انتخاب‌شده:\n${text}`;
 }
 function renderChat(tabId, prefill){
-  if(!chatMessages[tabId]) chatMessages[tabId]=loadChatHistory(tabId);
+  if(!chatMessages[tabId]) chatMessages[tabId]=[];
   pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI</h1><p class="chat-context">Ask about this tutorial. Your prompt is editable and is never sent automatically.</p></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
   var input=document.getElementById('chatInput');
   input.value=prefill||'';
   var list=document.getElementById('chatMessages');
   chatMessages[tabId].forEach(function(message){
-    var item=document.createElement('div'); item.className='chat-message '+message.role+(message.pending?' pending':'');
-    if(message.pending) item.innerHTML='AI@linux-tutorials:~$ '+message.content+' <span class="thinking-dots"><i></i><i></i><i></i></span>';
-    else item.textContent=message.content;
-    list.appendChild(item);
+    var item=document.createElement('div'); item.className='chat-message '+message.role; item.textContent=message.content; list.appendChild(item);
   });
   document.getElementById('chatForm').addEventListener('submit',function(e){
     e.preventDefault();
@@ -446,7 +434,6 @@ function renderChat(tabId, prefill){
 function appendChat(tabId, role, content){
   chatMessages[tabId]=chatMessages[tabId]||[];
   chatMessages[tabId].push({role:role, content:content});
-  saveChatHistory(tabId);
   renderChat(tabId);
   var list=document.getElementById('chatMessages');
   if(list) list.lastElementChild?.scrollIntoView({block:'nearest'});
@@ -455,27 +442,20 @@ async function sendChat(tabId, text){
   if(!text) return;
   var settings=chatSettings();
   if(!settings.apiKey){ openChatSettings(); toast('Add your personal API key first'); return; }
-  if(!settings.model || settings.model==='custom'){ openChatSettings(); toast('Choose or enter a model first'); return; }
-  if(settings.provider==='openai-compatible' && !settings.baseUrl){ openChatSettings(); toast('Add the custom API base URL first'); return; }
   appendChat(tabId,'user',text);
-  var requestMessages=chatMessages[tabId].map(function(message){ return {role:message.role, content:message.content}; });
-  var assistant={role:'assistant',content:'generating',pending:true};
-  chatMessages[tabId].push(assistant); saveChatHistory(tabId);
-  renderChat(tabId);
   var input=document.getElementById('chatInput'), send=document.querySelector('.chat-send');
   if(send) send.disabled=true;
   try{
     var response=await fetch(rootUrl('api/chat'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
       provider:settings.provider, model:settings.model, baseUrl:settings.baseUrl, apiKey:settings.apiKey,
-      messages:requestMessages
+      messages:chatMessages[tabId]
     })});
-    if(!response.ok){ var errorData=await response.json().catch(function(){ return {}; }); throw new Error(errorData.error||'Provider request failed ('+response.status+')'); }
     var data=await response.json();
+    if(!response.ok) throw new Error(data.error||'Provider request failed');
     var answer=data.choices?.[0]?.message?.content||data.candidates?.[0]?.content?.parts?.[0]?.text;
     if(!answer) throw new Error('The provider returned no text');
-    assistant.content=answer; assistant.pending=false;
-    saveChatHistory(tabId); renderChat(tabId);
-  }catch(error){ assistant.content='Error: '+error.message; assistant.pending=false; saveChatHistory(tabId); renderChat(tabId); }
+    appendChat(tabId,'assistant',answer);
+  }catch(error){ appendChat(tabId,'assistant','Error: '+error.message); }
   finally{ var button=document.querySelector('.chat-send'); if(button) button.disabled=false; }
 }
 function openChatSettings(){
@@ -483,31 +463,25 @@ function openChatSettings(){
   if(!modal) return;
   modal.hidden=false;
   document.getElementById('chatProvider').value=settings.provider;
-  document.getElementById('chatModel').value=['gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.5-flash','gemini-3.1-pro'].includes(settings.model)?settings.model:'custom';
+  document.getElementById('chatModel').value=settings.model;
   document.getElementById('chatCustomModel').value=settings.model;
   document.getElementById('chatBaseUrl').value=settings.baseUrl;
   document.getElementById('chatApiKey').value=settings.apiKey;
   document.getElementById('chatLanguage').value=settings.language;
   document.getElementById('customEndpointRow').hidden=settings.provider!=='openai-compatible';
-  document.getElementById('customModelRow').hidden=settings.provider!=='openai-compatible' && document.getElementById('chatModel').value!=='custom';
+  document.getElementById('customModelRow').hidden=settings.provider!=='openai-compatible';
 }
 var chatModal=document.getElementById('chatSettingsModal');
 document.querySelectorAll('[data-close-chat-settings]').forEach(function(el){ el.addEventListener('click',function(){ chatModal.hidden=true; }); });
 var chatProvider=document.getElementById('chatProvider');
-var chatModel=document.getElementById('chatModel');
-function syncCustomModel(){
-  document.getElementById('customEndpointRow').hidden=chatProvider.value!=='openai-compatible';
-  document.getElementById('customModelRow').hidden=chatProvider.value!=='openai-compatible' && chatModel.value!=='custom';
-}
 if(chatProvider) chatProvider.addEventListener('change',function(){
-  syncCustomModel();
+  document.getElementById('customEndpointRow').hidden=chatProvider.value!=='openai-compatible';
+  document.getElementById('customModelRow').hidden=chatProvider.value!=='openai-compatible';
 });
-if(chatModel) chatModel.addEventListener('change',syncCustomModel);
 var chatSettingsForm=document.getElementById('chatSettingsForm');
 if(chatSettingsForm) chatSettingsForm.addEventListener('submit',function(e){
   e.preventDefault();
-  var selectedModel=(chatProvider.value==='openai-compatible'||chatModel.value==='custom')?document.getElementById('chatCustomModel').value.trim():chatModel.value;
-  saveChatSettings({provider:chatProvider.value, model:selectedModel, baseUrl:document.getElementById('chatBaseUrl').value.trim(), apiKey:document.getElementById('chatApiKey').value, language:document.getElementById('chatLanguage').value});
+  saveChatSettings({provider:chatProvider.value, model:chatProvider.value==='openai-compatible'?document.getElementById('chatCustomModel').value.trim():document.getElementById('chatModel').value, baseUrl:document.getElementById('chatBaseUrl').value.trim(), apiKey:document.getElementById('chatApiKey').value, language:document.getElementById('chatLanguage').value});
   chatModal.hidden=true; toast('✓ chatbot settings saved for this tab');
 });
 var settingsChat=document.querySelector('[data-act="chatbot-settings"]');
@@ -515,7 +489,7 @@ if(settingsChat) settingsChat.addEventListener('click',function(){ closeMenus();
 var askAi=document.getElementById('askAi'), selectedPrompt='';
 document.addEventListener('selectionchange',function(){
   var selection=window.getSelection(), text=selection?.toString().trim();
-  if(!askAi||CHAPTER==='chat'||!text||!pane.contains(selection.anchorNode)){ if(askAi) askAi.hidden=true; return; }
+  if(!askAi||!text||!pane.contains(selection.anchorNode)){ if(askAi) askAi.hidden=true; return; }
   selectedPrompt=text;
   var rect=selection.getRangeAt(0).getBoundingClientRect();
   askAi.style.left=Math.max(10,Math.min(window.innerWidth-150,rect.left))+'px';
@@ -619,7 +593,6 @@ function renderTabs(state){
 }
 async function showLesson(meta, tabId, push){
   if(meta.slug==='chat'){
-    applyChrome(meta);
     renderChat(tabId, null);
     if(push!==false) history.pushState({slug:'chat', tab:tabId}, meta.title, rootUrl('chat/'));
     return;
@@ -718,13 +691,6 @@ window.addEventListener('popstate',function(){
 fetch(rootUrl('chapters.json')).then(function(r){ return r.json(); }).then(function(data){
   catalog=data;
   var state=tabState();
-  if(INITIAL_CHAT){
-    var chatTab={id:newTabId(), slug:'chat'};
-    state.tabs=[chatTab]; state.active=chatTab.id;
-    renderTabs(state);
-    showLesson(lessonMeta('chat'), state.active, false);
-    return;
-  }
   if(!state.tabs.some(function(t){ return t.id===state.active && t.slug===CHAPTER; })){
     var existing=state.tabs.filter(function(t){ return t.slug===CHAPTER; })[0];
     if(existing) state.active=existing.id;
