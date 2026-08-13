@@ -53,16 +53,35 @@ async function handleChat(request) {
   const endpoint = upstreamUrl(cleanProvider, cleanBaseUrl);
   if (!endpoint) return json({ error: "Custom endpoint must use HTTPS" }, 400);
 
+  const requestBody = (streaming) => JSON.stringify({ model: cleanModel, messages, stream: Boolean(streaming) });
   try {
-    const upstream = await fetch(endpoint, {
+    let upstream = await fetch(endpoint, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${cleanKey}`
       },
-      body: JSON.stringify({ model: cleanModel, messages, stream: Boolean(stream) })
+      body: requestBody(stream)
     });
+    if (!upstream.ok && stream) {
+      upstream = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${cleanKey}`
+        },
+        body: requestBody(false)
+      });
+    }
     const body = await upstream.text();
+    if (!upstream.ok) {
+      let message = "Provider request failed";
+      try {
+        const payload = JSON.parse(body);
+        message = payload.error?.message || payload.error || message;
+      } catch {}
+      return json({ error: message }, upstream.status);
+    }
     return new Response(body, {
       status: upstream.status,
       headers: { "content-type": upstream.headers.get("content-type") || "application/json", "cache-control": "no-store" }
@@ -76,6 +95,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/chat") return handleChat(request);
-    return env.ASSETS.fetch(request);
+    const asset = await env.ASSETS.fetch(request);
+    if (asset.status === 404 && request.headers.get("accept")?.includes("text/html")) {
+      return env.ASSETS.fetch(new Request(new URL("/", request.url), request));
+    }
+    return asset;
   }
 };

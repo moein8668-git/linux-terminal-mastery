@@ -6,7 +6,8 @@ if(!win||!pane) return;
 var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var SITE=window.SITE||{};
 var SITE_BASE=SITE.base||window.SITE_BASE||'./';
-var CHAPTER=SITE.slug||window.CURRENT_CHAPTER||'home';
+var INITIAL_CHAT=/\/chat\/?$/.test(location.pathname);
+var CHAPTER=INITIAL_CHAT?'chat':(SITE.slug||window.CURRENT_CHAPTER||'home');
 var catalog=null;
 var heads=[], segs=[], tocLinks=[];
 
@@ -734,6 +735,13 @@ window.addEventListener('popstate',function(){
 fetch(rootUrl('chapters.json')).then(function(r){ return r.json(); }).then(function(data){
   catalog=data;
   var state=tabState();
+  if(INITIAL_CHAT){
+    var chatTab={id:newTabId(), slug:'chat'};
+    state.tabs=[chatTab]; state.active=chatTab.id;
+    renderTabs(state);
+    showLesson(lessonMeta('chat'), state.active, false);
+    return;
+  }
   if(!state.tabs.some(function(t){ return t.id===state.active && t.slug===CHAPTER; })){
     var existing=state.tabs.filter(function(t){ return t.slug===CHAPTER; })[0];
     if(existing) state.active=existing.id;
