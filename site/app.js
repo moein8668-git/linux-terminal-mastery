@@ -432,7 +432,10 @@ function renderChat(tabId, prefill){
   input.value=prefill||'';
   var list=document.getElementById('chatMessages');
   chatMessages[tabId].forEach(function(message){
-    var item=document.createElement('div'); item.className='chat-message '+message.role; item.textContent=message.content; list.appendChild(item);
+    var item=document.createElement('div'); item.className='chat-message '+message.role+(message.pending?' pending':'');
+    if(message.pending) item.innerHTML='AI@linux-tutorials:~$ '+message.content+' <span class="thinking-dots"><i></i><i></i><i></i></span>';
+    else item.textContent=message.content;
+    list.appendChild(item);
   });
   document.getElementById('chatForm').addEventListener('submit',function(e){
     e.preventDefault();
@@ -455,44 +458,23 @@ async function sendChat(tabId, text){
   if(!settings.model || settings.model==='custom'){ openChatSettings(); toast('Choose or enter a model first'); return; }
   if(settings.provider==='openai-compatible' && !settings.baseUrl){ openChatSettings(); toast('Add the custom API base URL first'); return; }
   appendChat(tabId,'user',text);
+  var assistant={role:'assistant',content:'generating',pending:true};
+  chatMessages[tabId].push(assistant); saveChatHistory(tabId);
+  renderChat(tabId);
   var input=document.getElementById('chatInput'), send=document.querySelector('.chat-send');
   if(send) send.disabled=true;
   try{
     var response=await fetch(rootUrl('api/chat'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
       provider:settings.provider, model:settings.model.trim(), baseUrl:settings.baseUrl.trim(), apiKey:settings.apiKey.trim(),
-      messages:chatMessages[tabId], stream:true
+      messages:chatMessages[tabId].filter(function(message){ return !message.pending && typeof message.content==='string' && message.content.trim(); })
     })});
     if(!response.ok){ var errorData=await response.json().catch(function(){ return {}; }); throw new Error(errorData.error||'Provider request failed ('+response.status+')'); }
-    var assistant={role:'assistant',content:'AI@linux-tutorials:~$ generating…'};
-    chatMessages[tabId].push(assistant); saveChatHistory(tabId);
-    renderChat(tabId); 
-    if(!response.body) throw new Error('Streaming is not supported by this browser');
-    var contentType=response.headers.get('content-type')||'';
-    if(contentType.includes('application/json')){
-      var data=await response.json();
-      var direct=data.choices?.[0]?.message?.content||data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if(!direct) throw new Error('The provider returned no text');
-      assistant.content=direct; saveChatHistory(tabId); renderChat(tabId);
-      return;
-    }
-    var reader=response.body.getReader(), decoder=new TextDecoder(), buffer='';
-    while(true){
-      var part=await reader.read(); if(part.done) break;
-      buffer+=decoder.decode(part.value,{stream:true});
-      var lines=buffer.split('\n'); buffer=lines.pop();
-      lines.forEach(function(line){
-        if(!line.startsWith('data:')) return;
-        var raw=line.slice(5).trim(); if(!raw||raw==='[DONE]') return;
-        try{
-          var chunk=JSON.parse(raw);
-          var token=chunk.choices?.[0]?.delta?.content||'';
-          if(token){ assistant.content=assistant.content==='AI@linux-tutorials:~$ generating…'?'':assistant.content+token; saveChatHistory(tabId); renderChat(tabId); }
-        }catch(e){}
-      });
-    }
-    if(!assistant.content) assistant.content='AI@linux-tutorials:~$ no response';
+    var data=await response.json();
+    var answer=data.choices?.[0]?.message?.content||data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if(!answer) throw new Error('The provider returned no text');
+    assistant.content=answer; assistant.pending=false;
     saveChatHistory(tabId); renderChat(tabId);
-  }catch(error){ appendChat(tabId,'assistant','Error: '+error.message); }
+  }catch(error){ assistant.content='Error: '+error.message; assistant.pending=false; saveChatHistory(tabId); renderChat(tabId); }
   finally{ var button=document.querySelector('.chat-send'); if(button) button.disabled=false; }
 }
 function openChatSettings(){

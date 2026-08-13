@@ -37,7 +37,7 @@ async function handleChat(request) {
     return json({ error: "Invalid JSON" }, 400);
   }
 
-  const { provider, model, apiKey, baseUrl, messages, stream = false } = input || {};
+  const { provider, model, apiKey, baseUrl, messages } = input || {};
   const cleanProvider = typeof provider === "string" ? provider.trim() : "";
   const cleanModel = typeof model === "string" ? model.trim() : "";
   const cleanKey = typeof apiKey === "string" ? apiKey.trim() : "";
@@ -46,14 +46,16 @@ async function handleChat(request) {
   if (cleanKey.length < 10 || cleanKey.length > 500) return json({ error: "A valid personal API key is required" }, 400);
   if (!/^[\w.:-]{2,120}$/.test(cleanModel)) return json({ error: "Invalid model" }, 400);
   if (!Array.isArray(messages) || messages.length < 1 || messages.length > 40) return json({ error: "Invalid conversation" }, 400);
-  if (messages.some((message) => !message || !["user", "assistant", "system"].includes(message.role) || typeof message.content !== "string" || message.content.length > 20_000)) {
-    return json({ error: "Invalid message content" }, 400);
-  }
+  const validMessages = messages
+    .filter((message) => message && ["user", "assistant", "system"].includes(message.role) && typeof message.content === "string")
+    .map((message) => ({ role: message.role, content: message.content.slice(0, 20_000) }))
+    .filter((message) => message.content.trim());
+  if (!validMessages.length) return json({ error: "No valid messages to send" }, 400);
 
   const endpoint = upstreamUrl(cleanProvider, cleanBaseUrl);
   if (!endpoint) return json({ error: "Custom endpoint must use HTTPS" }, 400);
 
-  const requestBody = (streaming) => JSON.stringify({ model: cleanModel, messages, stream: Boolean(streaming) });
+  const requestBody = JSON.stringify({ model: cleanModel, messages: validMessages, stream: false });
   try {
     let upstream = await fetch(endpoint, {
       method: "POST",
@@ -61,18 +63,8 @@ async function handleChat(request) {
         "content-type": "application/json",
         authorization: `Bearer ${cleanKey}`
       },
-      body: requestBody(stream)
+      body: requestBody
     });
-    if (!upstream.ok && stream) {
-      upstream = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${cleanKey}`
-        },
-        body: requestBody(false)
-      });
-    }
     const body = await upstream.text();
     if (!upstream.ok) {
       let message = "Provider request failed";
