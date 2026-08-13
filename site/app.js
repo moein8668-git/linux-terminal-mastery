@@ -444,20 +444,64 @@ async function sendChat(tabId, text){
   if(!settings.apiKey){ openChatSettings(); toast('Add your personal API key first'); return; }
   if(!settings.baseUrl){ openChatSettings(); toast('Add the provider API base URL first'); return; }
   appendChat(tabId,'user',text);
-  var input=document.getElementById('chatInput'), send=document.querySelector('.chat-send');
+  var assistant={role:'assistant',content:''};
+  chatMessages[tabId].push(assistant);
+  renderChat(tabId);
+  var send=document.querySelector('.chat-send');
   if(send) send.disabled=true;
   try{
-    var endpoint=settings.baseUrl.replace(/\/+$/,'')+'/chat/completions';
-    var response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+settings.apiKey},body:JSON.stringify({
-      model:settings.model, messages:chatMessages[tabId], stream:false
-    })});
-    var data=await response.json();
-    if(!response.ok) throw new Error(data.error||'Provider request failed');
-    var answer=data.choices?.[0]?.message?.content||data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if(!answer) throw new Error('The provider returned no text');
-    appendChat(tabId,'assistant',answer);
-  }catch(error){ appendChat(tabId,'assistant','Error: '+error.message); }
+    if(settings.provider==='google'){
+      await streamGemini(settings, chatMessages[tabId], function(text){
+        assistant.content+=text;
+        renderChat(tabId);
+      });
+    }else{
+      var endpoint=settings.baseUrl.replace(/\/+$/,'')+'/chat/completions';
+      var messages=chatMessages[tabId].filter(function(message){ return message.content; });
+      messages=messages.map(function(message){ return {role:message.role==='assistant'?'assistant':'user',content:message.content}; });
+      var response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+settings.apiKey},body:JSON.stringify({
+        model:settings.model, messages:messages, stream:false
+      })});
+      var data=await response.json();
+      if(!response.ok) throw new Error(data.error?.message||data.error||'Provider request failed');
+      assistant.content=data.choices?.[0]?.message?.content||'';
+    }
+    if(!assistant.content) throw new Error('The provider returned no text');
+    renderChat(tabId);
+  }catch(error){
+    assistant.content='Error: '+error.message;
+    renderChat(tabId);
+  }
   finally{ var button=document.querySelector('.chat-send'); if(button) button.disabled=false; }
+}
+async function streamGemini(settings, history, onChunk){
+  var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(settings.model)+':streamGenerateContent?alt=sse&key='+encodeURIComponent(settings.apiKey);
+  var contents=history.filter(function(message){ return message.content; }).map(function(message){
+    return {role:message.role==='assistant'?'model':'user', parts:[{text:message.content}]};
+  });
+  var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:contents})});
+  if(!response.ok){
+    var detail='';
+    try{ detail=(await response.json()).error?.message||''; }catch(e){}
+    throw new Error('API request failed ('+response.status+'). '+detail);
+  }
+  var reader=response.body.getReader(), decoder=new TextDecoder(), buffer='';
+  while(true){
+    var part=await reader.read(); if(part.done) break;
+    buffer+=decoder.decode(part.value,{stream:true});
+    var lines=buffer.split('\n'); buffer=lines.pop();
+    lines.forEach(function(line){
+      var trimmed=line.trim();
+      if(!trimmed.startsWith('data:')) return;
+      var raw=trimmed.slice(5).trim();
+      if(!raw||raw==='[DONE]') return;
+      try{
+        var obj=JSON.parse(raw);
+        var parts=obj.candidates?.[0]?.content?.parts||[];
+        parts.forEach(function(item){ if(item.text) onChunk(item.text); });
+      }catch(e){}
+    });
+  }
 }
 function openChatSettings(){
   var modal=document.getElementById('chatSettingsModal'), settings=chatSettings();
