@@ -450,6 +450,11 @@ hr.sep{ border:0; border-top:1px dashed var(--border); margin:3em 0 2em; }
   .side-toggle{ display:block; }
 }
 @media (max-width:600px){
+  .menubar{ gap:0; padding-inline:2px; max-width:100%; }
+  .mi{ padding:5px 6px; font-size:.68rem; }
+  .mi-wrap{ flex:0 1 auto; min-width:0; }
+  .menu-pop{ max-width:calc(100vw - 16px); max-height:70vh; overflow:auto; }
+  .pop-item{ font-size:.7rem; padding:6px 8px; }
   .chat-shell{ width:100%; max-width:none; }
   .chat-messages{ gap:8px; }
   .chat-message{ max-width:100%; padding:9px 10px; font-size:.84rem; }

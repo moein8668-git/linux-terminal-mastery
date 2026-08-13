@@ -121,6 +121,16 @@ wraps.forEach(function(w){
 document.addEventListener('click',function(e){
   if(!e.target.closest('.mi-wrap')) closeMenus();
   if(!e.target.closest('.findbar')){ findRes.hidden=true; }
+  if(isMobile() && win.classList.contains('side-open') &&
+     !e.target.closest('#sidebar') && !e.target.closest('#sideToggle')){
+    win.classList.remove('side-open'); syncSide();
+  }
+});
+document.addEventListener('pointerdown',function(e){
+  if(isMobile() && win.classList.contains('side-open') &&
+     !e.target.closest('#sidebar') && !e.target.closest('#sideToggle')){
+    win.classList.remove('side-open'); syncSide();
+  }
 });
 
 /* ---------- themes ---------- */

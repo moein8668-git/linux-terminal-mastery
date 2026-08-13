@@ -203,7 +203,7 @@ const renderPage = (chapter, content, base) => {
   const title = chapter ? chapter.title : "Linux Terminal Mastery";
   const subtitle = chapter ? chapter.subtitle : "From Zero to Linux Power User";
   const tags = (chapter ? chapter.tags : ["linux", "terminal", "bash", "cli"])
-    .map((tag) => `<span class="tag" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</span>`)
+    .map((tag) => `<span class="tag" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`)
     .join("");
   const path = chapter ? `~/tutorials/${chapter.folder.toLowerCase()}` : "~/tutorials";
   const replacements = {
