@@ -406,8 +406,8 @@ function applyChrome(meta){
 var CHAT_KEY='lt-chat-settings', chatMessages={};
 function chatSettings(){
   try{
-    return Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
-  }catch(e){ return {provider:'google', model:'gemini-3.6-flash', baseUrl:'', apiKey:'', language:'fa'}; }
+    return Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
+  }catch(e){ return {provider:'google', model:'gemini-3.6-flash', baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai', apiKey:'', language:'fa'}; }
 }
 function saveChatSettings(value){
   try{ sessionStorage.setItem(CHAT_KEY, JSON.stringify(value)); }catch(e){}
@@ -442,13 +442,14 @@ async function sendChat(tabId, text){
   if(!text) return;
   var settings=chatSettings();
   if(!settings.apiKey){ openChatSettings(); toast('Add your personal API key first'); return; }
+  if(!settings.baseUrl){ openChatSettings(); toast('Add the provider API base URL first'); return; }
   appendChat(tabId,'user',text);
   var input=document.getElementById('chatInput'), send=document.querySelector('.chat-send');
   if(send) send.disabled=true;
   try{
-    var response=await fetch(rootUrl('api/chat'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
-      provider:settings.provider, model:settings.model, baseUrl:settings.baseUrl, apiKey:settings.apiKey,
-      messages:chatMessages[tabId]
+    var endpoint=settings.baseUrl.replace(/\/+$/,'')+'/chat/completions';
+    var response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+settings.apiKey},body:JSON.stringify({
+      model:settings.model, messages:chatMessages[tabId], stream:false
     })});
     var data=await response.json();
     if(!response.ok) throw new Error(data.error||'Provider request failed');
@@ -468,14 +469,12 @@ function openChatSettings(){
   document.getElementById('chatBaseUrl').value=settings.baseUrl;
   document.getElementById('chatApiKey').value=settings.apiKey;
   document.getElementById('chatLanguage').value=settings.language;
-  document.getElementById('customEndpointRow').hidden=settings.provider!=='openai-compatible';
   document.getElementById('customModelRow').hidden=settings.provider!=='openai-compatible';
 }
 var chatModal=document.getElementById('chatSettingsModal');
 document.querySelectorAll('[data-close-chat-settings]').forEach(function(el){ el.addEventListener('click',function(){ chatModal.hidden=true; }); });
 var chatProvider=document.getElementById('chatProvider');
 if(chatProvider) chatProvider.addEventListener('change',function(){
-  document.getElementById('customEndpointRow').hidden=chatProvider.value!=='openai-compatible';
   document.getElementById('customModelRow').hidden=chatProvider.value!=='openai-compatible';
 });
 var chatSettingsForm=document.getElementById('chatSettingsForm');
@@ -489,7 +488,7 @@ if(settingsChat) settingsChat.addEventListener('click',function(){ closeMenus();
 var askAi=document.getElementById('askAi'), selectedPrompt='';
 document.addEventListener('selectionchange',function(){
   var selection=window.getSelection(), text=selection?.toString().trim();
-  if(!askAi||!text||!pane.contains(selection.anchorNode)){ if(askAi) askAi.hidden=true; return; }
+  if(!askAi||CHAPTER==='chat'||!text||!pane.contains(selection.anchorNode)){ if(askAi) askAi.hidden=true; return; }
   selectedPrompt=text;
   var rect=selection.getRangeAt(0).getBoundingClientRect();
   askAi.style.left=Math.max(10,Math.min(window.innerWidth-150,rect.left))+'px';
