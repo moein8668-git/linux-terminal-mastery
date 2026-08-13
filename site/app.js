@@ -458,6 +458,7 @@ async function sendChat(tabId, text){
   if(!settings.model || settings.model==='custom'){ openChatSettings(); toast('Choose or enter a model first'); return; }
   if(settings.provider==='openai-compatible' && !settings.baseUrl){ openChatSettings(); toast('Add the custom API base URL first'); return; }
   appendChat(tabId,'user',text);
+  var requestMessages=chatMessages[tabId].map(function(message){ return {role:message.role, content:message.content}; });
   var assistant={role:'assistant',content:'generating',pending:true};
   chatMessages[tabId].push(assistant); saveChatHistory(tabId);
   renderChat(tabId);
@@ -465,8 +466,8 @@ async function sendChat(tabId, text){
   if(send) send.disabled=true;
   try{
     var response=await fetch(rootUrl('api/chat'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
-      provider:settings.provider, model:settings.model.trim(), baseUrl:settings.baseUrl.trim(), apiKey:settings.apiKey.trim(),
-      messages:chatMessages[tabId].filter(function(message){ return !message.pending && typeof message.content==='string' && message.content.trim(); })
+      provider:settings.provider, model:settings.model, baseUrl:settings.baseUrl, apiKey:settings.apiKey,
+      messages:requestMessages
     })});
     if(!response.ok){ var errorData=await response.json().catch(function(){ return {}; }); throw new Error(errorData.error||'Provider request failed ('+response.status+')'); }
     var data=await response.json();
