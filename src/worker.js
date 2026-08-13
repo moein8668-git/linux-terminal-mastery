@@ -1,6 +1,7 @@
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
-  "cache-control": "no-store"
+  "cache-control": "no-store",
+  "x-ai-chat-revision": "2026-08-13-message-normalization"
 };
 
 const json = (data, status = 200) =>
@@ -45,12 +46,13 @@ async function handleChat(request) {
   if (!["google", "openai-compatible"].includes(cleanProvider)) return json({ error: "Unsupported provider" }, 400);
   if (cleanKey.length < 10 || cleanKey.length > 500) return json({ error: "A valid personal API key is required" }, 400);
   if (!/^[\w.:-]{2,120}$/.test(cleanModel)) return json({ error: "Invalid model" }, 400);
-  if (!Array.isArray(messages) || messages.length < 1 || messages.length > 40) return json({ error: "Invalid conversation" }, 400);
+  if (!Array.isArray(messages) || messages.length < 1) return json({ error: "A message is required" }, 400);
   const validMessages = messages
     .filter((message) => message && ["user", "assistant", "system"].includes(message.role) && typeof message.content === "string")
     .map((message) => ({ role: message.role, content: message.content.slice(0, 20_000) }))
-    .filter((message) => message.content.trim());
-  if (!validMessages.length) return json({ error: "No valid messages to send" }, 400);
+    .filter((message) => message.content.trim())
+    .slice(-40);
+  if (!validMessages.length) return json({ error: "A text message is required" }, 400);
 
   const endpoint = upstreamUrl(cleanProvider, cleanBaseUrl);
   if (!endpoint) return json({ error: "Custom endpoint must use HTTPS" }, 400);
@@ -76,7 +78,11 @@ async function handleChat(request) {
     }
     return new Response(body, {
       status: upstream.status,
-      headers: { "content-type": upstream.headers.get("content-type") || "application/json", "cache-control": "no-store" }
+      headers: {
+        "content-type": upstream.headers.get("content-type") || "application/json",
+        "cache-control": "no-store",
+        "x-ai-chat-revision": "2026-08-13-message-normalization"
+      }
     });
   } catch {
     return json({ error: "Provider request failed" }, 502);
