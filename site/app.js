@@ -796,20 +796,28 @@ function renderChatHistory(tabId){
   chatIndex().forEach(function(record){
     var button=document.createElement('button'); button.className='chat-history-item'; button.type='button';
     button.textContent=record.title||record.prompt||'new chat';
-    button.addEventListener('click',function(){
-      var state=tabState(), tab=state.tabs.filter(function(item){ return item.id===record.id; })[0];
-      if(tab&&tab.slug==='chat') activateTab(tab.id);
-      else{
-        var chatId=newTabId();
-        state.tabs.push({id:chatId, slug:'chat', title:record.title||'new chat'});
-        chatMessages[chatId]=loadChatHistory(record.id);
-        saveChatHistory(chatId);
-        state.active=chatId; writeTabs(state); renderTabs(state); showLesson(lessonMeta('chat'),chatId,true);
-      }
-    });
+    button.addEventListener('click',function(){ openHistoryRecord(record,false); });
+    button.addEventListener('auxclick',function(e){ if(e.button===1){ e.preventDefault(); openHistoryRecord(record,true); } });
+    button.addEventListener('mousedown',function(e){ if(e.button===1) e.preventDefault(); });
     list.appendChild(button);
   });
   if(!list.children.length){ list.textContent='No chats in this browser session yet.'; }
+}
+function openHistoryRecord(record, newTab){
+  var state=tabState(), existing=state.tabs.filter(function(item){ return item.id===record.id&&item.slug==='chat'; })[0];
+  if(existing&&!newTab){ activateTab(existing.id); return; }
+  var tab;
+  if(newTab){
+    tab={id:newTabId(), slug:'chat', title:record.title||'new chat'};
+    state.tabs.push(tab);
+  }else{
+    tab=currentTab(state);
+    if(!tab){ tab={id:newTabId()}; state.tabs.push(tab); }
+    tab.slug='chat'; tab.title=record.title||'new chat';
+  }
+  chatMessages[tab.id]=loadChatHistory(record.id);
+  saveChatHistory(tab.id);
+  state.active=tab.id; writeTabs(state); renderTabs(state); showLesson(lessonMeta('chat'),tab.id,true);
 }
 async function openLesson(slug, forceNew, prefill){
   var meta=lessonMeta(slug);
