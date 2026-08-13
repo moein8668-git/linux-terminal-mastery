@@ -409,7 +409,7 @@ function applyChrome(meta){
 /* ---------- AI chat ---------- */
 var CHAT_KEY='lt-chat-settings', CHAT_HISTORY_KEY='lt-chat-history', CHAT_INDEX_KEY='lt-chat-index', chatMessages={};
 function loadChatHistory(tabId){
-  try{ return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY+':'+tabId)||'[]'); }catch(e){ return []; }
+  try{ return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY+':'+tabId)||'[]').filter(function(message){ return !message.pending; }); }catch(e){ return []; }
 }
 function saveChatHistory(tabId){
   try{ localStorage.setItem(CHAT_HISTORY_KEY+':'+tabId, JSON.stringify(chatMessages[tabId]||[])); }catch(e){}
@@ -441,6 +441,22 @@ function promptForSelection(text, language){
   if(language==='en') return `Explain this selected part of the Linux tutorial clearly. Define unfamiliar terms, explain what each command or concept does, and include a small practical example. Do not assume prior knowledge.\n\nSelected part:\n${text}`;
   return `این بخش انتخاب‌شده از آموزش لینوکس را به زبان فارسی ساده و دقیق توضیح بده. اصطلاحات ناآشنا، کاربرد دستورها یا مفهوم اصلی را توضیح بده و یک مثال عملی کوتاه هم اضافه کن. فرض نکن کاربر دانش قبلی دارد.\n\nبخش انتخاب‌شده:\n${text}`;
 }
+function formatChatAnswer(text){
+  var blocks=[];
+  var safe=text.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g,function(_,lang,code){
+    var id='@@CODE_'+blocks.length+'@@';
+    blocks.push('<pre class="chat-code"><code class="language-'+(lang||'text')+'">'+esc(code.trim())+'</code></pre>');
+    return id;
+  });
+  safe=esc(safe);
+  safe=safe.replace(/^###\s+(.+)$/gm,'<h3>$1</h3>').replace(/^##\s+(.+)$/gm,'<h2>$1</h2>');
+  safe=safe.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  safe=safe.replace(/^(?:\*|-)\s+(.+)$/gm,'<li>$1</li>');
+  safe=safe.replace(/((?:<li>.*<\/li>\n?)+)/g,'<ul>$1</ul>');
+  safe=safe.replace(/\n/g,'<br>');
+  blocks.forEach(function(block,i){ safe=safe.replace('@@CODE_'+i+'@@',block); });
+  return safe;
+}
 function renderChat(tabId, prefill){
   if(!chatMessages[tabId]) chatMessages[tabId]=loadChatHistory(tabId);
   pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI <button class="chat-rename" id="chatRename" type="button">rename</button></h1></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
@@ -455,7 +471,10 @@ function renderChat(tabId, prefill){
       item.appendChild(prompt);
       if(message.pending){ var cursor=document.createElement('span'); cursor.className='cursor'; prompt.appendChild(cursor); }
     }
-    var body=document.createElement('div'); body.className='chat-message-body'; body.dir=/[\u0600-\u06ff]/.test(message.content)?'rtl':'ltr'; body.textContent=message.content; item.appendChild(body);
+    var body=document.createElement('div'); body.className='chat-message-body'; body.dir=/[\u0600-\u06ff]/.test(message.content)?'rtl':'ltr';
+    if(message.role==='assistant'&&!message.pending) body.innerHTML=formatChatAnswer(message.content);
+    else body.textContent=message.content;
+    item.appendChild(body);
     list.appendChild(item);
   });
   document.getElementById('chatForm').addEventListener('submit',function(e){
@@ -490,6 +509,7 @@ async function sendChat(tabId, text){
   var settings=chatSettings();
   if(!settings.apiKey){ openChatSettings(); toast('Add your personal API key first'); return; }
   if(!settings.baseUrl){ openChatSettings(); toast('Add the provider API base URL first'); return; }
+  var firstResponse=!chatMessages[tabId].some(function(message){ return message.role==='user'; });
   appendChat(tabId,'user',text);
   nameChatTab(tabId,text);
   var assistant={role:'assistant',content:''};
@@ -518,7 +538,7 @@ async function sendChat(tabId, text){
     }
     if(!assistant.content) throw new Error('The provider returned no text');
     saveChatHistory(tabId);
-    suggestChatTitle(tabId,text,assistant.content);
+    if(firstResponse) suggestChatTitle(tabId,text,assistant.content);
     renderChat(tabId);
   }catch(error){
     assistant.content='Error: '+error.message;
@@ -559,15 +579,15 @@ async function streamGemini(settings, history, onChunk){
 async function suggestChatTitle(tabId, promptText, answerText){
   var settings=chatSettings(), title='';
   try{
-    var instruction='Return only a short title (3 to 6 words) for this chat. No quotes, no punctuation.\\nUser prompt:\\n'+promptText+'\\nAssistant answer:\\n'+answerText.slice(0,3000);
+    var instruction='Return only a short title of 3 to 6 words for this chat. No quotes, no punctuation, no explanation. This is an automated naming request, not a request to answer the user.\\nUser prompt:\\n'+promptText+'\\nAssistant answer:\\n'+answerText.slice(0,3000);
     if(settings.provider==='google'){
       var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(settings.model)+':generateContent?key='+encodeURIComponent(settings.apiKey);
-      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:instruction}]}]})});
+      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:'You are a chat title generator. Follow the instruction and output only the title.'}]},contents:[{role:'user',parts:[{text:instruction}]}]})});
       var data=await response.json();
       title=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
     }else{
       var endpoint=settings.baseUrl.replace(/\/+$/,'')+'/chat/completions';
-      var response2=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+settings.apiKey},body:JSON.stringify({model:settings.model,messages:[{role:'user',content:instruction}],stream:false})});
+      var response2=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+settings.apiKey},body:JSON.stringify({model:settings.model,messages:[{role:'system',content:'You are a chat title generator. Follow the user instruction exactly and output only the title.'},{role:'user',content:instruction}],stream:false})});
       var data2=await response2.json();
       title=data2.choices?.[0]?.message?.content||'';
     }
@@ -835,8 +855,9 @@ fetch(rootUrl('chapters.json')).then(function(r){ return r.json(); }).then(funct
   catalog=data;
   var state=tabState();
   if(INITIAL_CHAT || INITIAL_HISTORY){
-    var chatTab={id:newTabId(), slug:'chat'};
-    state.tabs=[chatTab]; state.active=chatTab.id;
+    var chatTab=state.tabs.filter(function(tab){ return tab.slug==='chat'; })[0];
+    if(!chatTab){ chatTab={id:newTabId(), slug:'chat'}; state.tabs.push(chatTab); }
+    state.active=chatTab.id;
     renderTabs(state);
     showLesson(INITIAL_HISTORY?lessonMeta('chat-history'):lessonMeta('chat'), state.active, false);
     return;

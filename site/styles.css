@@ -263,6 +263,11 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 .chat-message.assistant{ border-inline-start:3px solid var(--accent-2); }
 .chat-terminal-prompt{ direction:ltr; color:var(--accent-2); font: .75rem var(--mono); margin-bottom:6px; }
 .chat-message-body{ white-space:pre-wrap; line-height:1.9; }
+.chat-message-body h2,.chat-message-body h3{ color:var(--fg-strong); border-bottom:1px dashed var(--border); padding-bottom:4px; margin:12px 0 8px; }
+.chat-message-body strong{ color:var(--accent-2); }
+.chat-message-body code{ direction:ltr; unicode-bidi:isolate; background:var(--inline-bg); color:var(--syn-tool); padding:1px 5px; }
+.chat-code{ direction:ltr; text-align:left; overflow:auto; background:var(--code-bg); border:1px solid var(--border); padding:12px; margin:10px 0; }
+.chat-code code{ background:none; padding:0; color:var(--fg); white-space:pre; }
 .chat-form{ display:flex; gap:8px; direction:ltr; position:sticky; bottom:10px; }
 .chat-input{ min-height:80px; resize:vertical; }
 .chat-send{ align-self:end; border:1px solid var(--accent-2); background:var(--head); color:var(--accent-2); padding:8px 14px; cursor:pointer; font:inherit; }
