@@ -140,26 +140,31 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
   overflow:hidden; direction:ltr; transition:background .35s, border-color .35s; }
 .window::before{
   content:""; position:absolute; inset:0; z-index:500; pointer-events:none;
-  background:repeating-linear-gradient(0deg, rgba(0,0,0,.38) 0 1px, rgba(0,0,0,0) 1px 3px);
-  animation:crt-flicker 5.5s infinite;
+  background:
+    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--accent-2) 10%, transparent) 0 2px, transparent 2px 5px),
+    radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,.16) 100%);
+  animation:crt-flicker 1.5s infinite;
 }
 .window::after{
-  content:""; position:absolute; inset:0; z-index:501; pointer-events:none;
-  background:
-    linear-gradient(to bottom, transparent, rgba(170,255,200,.08), transparent),
-    linear-gradient(to top, transparent, rgba(140,210,255,.06), transparent);
-  background-repeat:no-repeat;
-  background-size:100% 10px, 100% 8px;
-  animation:crt-wave 9s linear infinite;
+  content:""; position:absolute; top:-30%; left:0; width:100%; height:3px; z-index:501; pointer-events:none;
+  background:linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--accent-2) 22%, transparent) 50%, transparent 100%);
+  animation:crt-sweep 12s linear infinite;
+  filter:blur(1.5px); mix-blend-mode:screen;
 }
 @keyframes crt-flicker{
-  0%, 90%, 100%{ opacity:.4; }
-  92%{ opacity:.28; }
-  94%{ opacity:.46; }
+  0%, 100%{ opacity:1; }
+  10%{ opacity:.992; }
+  20%{ opacity:.998; }
+  30%{ opacity:.988; }
+  40%{ opacity:.996; }
+  50%{ opacity:.99; }
+  60%{ opacity:1; }
+  70%{ opacity:.985; }
+  80%{ opacity:.997; }
 }
-@keyframes crt-wave{
-  0%{ background-position:0 -12px, 0 calc(100% + 12px); }
-  100%{ background-position:0 calc(100% + 12px), 0 -12px; }
+@keyframes crt-sweep{
+  0%{ top:-30%; }
+  100%{ top:130%; }
 }
 
 .titlebar{ display:flex; align-items:center; gap:10px; height:36px; padding:0 8px;
