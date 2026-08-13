@@ -1,45 +1,195 @@
-<!doctype html>
-<html lang="fa" dir="rtl" data-theme="dracula">
+<!DOCTYPE html>
+<html lang="fa" dir="ltr" data-theme="dracula">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark light">
-  <title>{{TITLE}} · Linux Terminal Mastery</title>
-  <link rel="stylesheet" href="{{BASE}}styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>{{DOC_TITLE}} · linux-tutorials</title>
+
+<script>
+(function(){
+  try{
+    var t=localStorage.getItem('lt-theme');
+    var ok=['dracula','nord','gruvbox','monokai','tokyo-night','solarized-light','matrix','cyberpunk','everforest'];
+    if(t&&ok.indexOf(t)!==-1)document.documentElement.setAttribute('data-theme',t);
+  }catch(e){}
+})();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{BASE}}styles.css">
 </head>
+
 <body>
-  <div class="window">
-    <header class="titlebar"><span class="prompt-icon">&gt;_</span><strong>linux-terminal-mastery</strong><span class="path">~/tutorials</span><button id="themeButton" type="button" title="تغییر پوسته">◐</button></header>
-    <nav class="menubar" aria-label="منوی اصلی">
-      <a href="{{BASE}}" class="menu-link">خانه</a>
-      <button class="menu-link" type="button" data-menu="chaptersMenu">فصل‌ها⌄</button>
-      <button class="menu-link" type="button" data-menu="toolsMenu">ابزارها⌄</button>
-      <div class="menu-panel" id="chaptersMenu" hidden><input id="chapterSearch" type="search" placeholder="جستجوی فصل‌ها…" aria-label="جستجوی فصل‌ها"><ul class="menu-chapters">{{CHAPTER_NAV}}</ul></div>
-      <div class="menu-panel tools" id="toolsMenu" hidden><button type="button" data-action="print">چاپ / ذخیره PDF</button><button type="button" data-action="copy">کپی کدهای این فصل</button><button type="button" data-action="top">رفتن به ابتدای صفحه</button></div>
-      <span class="menu-spacer"></span><a class="github-link" href="https://github.com/moein8668-git/linux-terminal-mastery" target="_blank" rel="noreferrer">GitHub ↗</a>
-    </nav>
-    <div class="layout">
-      <main class="content" id="content">
-        <div class="terminal-line"><span>user@linux</span>:<b>~/tutorials</b>$ cat {{CHAPTER_FILE}}</div>
-        <header class="document-head" dir="rtl">
-          <div class="eyebrow">UTF-8 · markdown</div>
-          <h1>{{TITLE}}</h1>
-          <div class="tags" aria-label="برچسب‌های فصل">{{TAGS}}</div>
-        </header>
-        <article class="markdown" dir="rtl">{{CONTENT}}</article>
-      </main>
-      <aside class="sidebar" aria-label="فهرست فصل‌ها">
-        <div class="side-heading">$ tree tutorials</div>
-        <ul class="chapter-tree">{{CHAPTER_NAV}}</ul>
-        <div class="side-heading">$ tags</div>
-        <div class="tag-list">{{TAG_FILTERS}}</div>
-        <div class="side-heading">$ grep '^#' README.md</div>
-        <nav class="toc" id="toc" aria-label="فهرست مطالب"></nav>
-      </aside>
+<a class="skip" href="#pane">پرش به محتوا</a>
+
+<div class="window" id="win">
+
+  <div class="titlebar">
+    <span class="ticon" aria-hidden="true">&gt;_</span>
+    <div class="ttitle"><b>user@linux-tutorials</b>: {{TITLEBAR_PATH}} — linux-tutorials</div>
+    <div class="winbtns" aria-hidden="true">
+      <button class="winbtn" tabindex="-1">─</button>
+      <button class="winbtn" tabindex="-1">□</button>
+      <button class="winbtn close" tabindex="-1">✕</button>
     </div>
-    <footer class="statusbar"><span>NORMAL</span><span id="progress">0%</span><span class="grow"></span><span id="clock">--:--</span><span>linux tutorials</span></footer>
   </div>
-  <script>window.SITE_BASE = "{{BASE}}"; window.CURRENT_CHAPTER = "{{CHAPTER_SLUG}}";</script>
-  <script src="{{BASE}}app.js" defer></script>
+
+  <nav class="menubar" aria-label="Menu">
+    <div class="mi-wrap">
+      <button class="mi" aria-haspopup="menu" aria-expanded="false">File</button>
+      <div class="menu-pop" role="menu" hidden>
+        <button class="pop-item" role="menuitem" data-act="download" data-download-url="{{DOWNLOAD_URL}}">Download current lesson (.md)</button>
+        <button class="pop-item" role="menuitem" data-act="newtab">New Tab</button>
+        <div class="pop-sep" role="separator"></div>
+        <button class="pop-item" role="menuitem" data-act="exit">Exit</button>
+      </div>
+    </div>
+    <div class="mi-wrap">
+      <button class="mi" aria-haspopup="menu" aria-expanded="false">Edit</button>
+      <div class="menu-pop" role="menu" hidden>
+        <button class="pop-item" role="menuitem" data-act="copyall">Copy all commands</button>
+        <button class="pop-item" role="menuitem" data-act="find">Find in chapter… <span class="kbd">/</span></button>
+      </div>
+    </div>
+    <div class="mi-wrap">
+      <button class="mi" aria-haspopup="menu" aria-expanded="false">View</button>
+      <div class="menu-pop" role="menu" hidden>
+        <button class="pop-item" role="menuitemcheckbox" aria-checked="true" data-act="sidebar">Show Sidebar</button>
+        <button class="pop-item" role="menuitem" data-act="zoomin">Zoom In <span class="kbd">+</span></button>
+        <button class="pop-item" role="menuitem" data-act="zoomout">Zoom Out <span class="kbd">−</span></button>
+        <button class="pop-item" role="menuitem" data-act="zoomreset">Reset Zoom</button>
+        <div class="pop-sep" role="separator"></div>
+        <div class="pop-label" aria-hidden="true">Color Scheme</div>
+        <button class="pop-item" role="menuitemradio" aria-checked="true"  data-t="dracula">dracula</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="nord">nord</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="gruvbox">gruvbox</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="monokai">monokai</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="tokyo-night">tokyo-night</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="solarized-light">solarized-light</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="matrix">matrix</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="cyberpunk">cyberpunk</button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false" data-t="everforest">everforest</button>
+      </div>
+    </div>
+    <div class="mi-wrap">
+      <button class="mi" aria-haspopup="menu" aria-expanded="false">Bookmarks</button>
+      <div class="menu-pop" role="menu" hidden>
+        <button class="pop-item" role="menuitem" data-act="addmark">⌁ Bookmark this position</button>
+        <div class="pop-sep" role="separator"></div>
+        <div id="bmList"><div class="pop-note">no bookmarks yet</div></div>
+      </div>
+    </div>
+    <div class="mi-wrap">
+      <button class="mi" aria-haspopup="menu" aria-expanded="false">Settings</button>
+      <div class="menu-pop" role="menu" hidden>
+        <button class="pop-item" role="menuitemcheckbox" aria-checked="true" data-act="scan">CRT scanlines</button>
+      </div>
+    </div>
+    <div class="mi-wrap">
+      <button class="mi" aria-haspopup="menu" aria-expanded="false">Help</button>
+      <div class="menu-pop" role="menu" hidden>
+        <button class="pop-item" role="menuitem" data-act="about">man linux-tutorials <span class="kbd">?</span></button>
+        <button class="pop-item" role="menuitem" data-act="about2">Keyboard shortcuts</button>
+      </div>
+    </div>
+
+    <div class="findbar" id="findbar" hidden>
+      <input id="findInput" type="text" placeholder="{{FIND_PLACEHOLDER}}" aria-label="Find in chapter" autocomplete="off">
+      <div class="find-res" id="findRes" hidden></div>
+    </div>
+  </nav>
+
+  <div class="tabbar">
+    <div class="tabstrip" id="tabstrip"></div>
+    <button class="tab-add" id="tabAdd" type="button" title="new tab">+</button>
+    <button class="side-toggle" id="sideToggle" aria-expanded="false" aria-controls="sidebar">≡ sidebar</button>
+  </div>
+
+  <div class="body">
+
+    <main class="pane" id="pane" tabindex="-1">
+
+      <div class="session" aria-hidden="true">
+        <span class="prompt"><span class="pr-u">user@linux-tutorials</span><span class="pr-s">:</span><span class="pr-p">~</span><span class="pr-s">$</span></span>
+        <span class="cmdline" id="typed">{{TYPED_CMD}}</span>
+      </div>
+
+      <header class="block rv" dir="rtl">
+        <p class="filepath-line">{{FILEPATH}} <a class="dl-link" id="downloadLink" href="{{DOWNLOAD_URL}}" download="{{CHAPTER_FILE}}">⬇ download {{CHAPTER_FILE}}</a></p>
+        <h1 id="doc-title">{{CHAPTER_TITLE}}</h1>
+        <p class="subtitle" lang="en">{{SUBTITLE}}</p>
+        <div class="tags" aria-label="برچسب‌ها">{{TAGS}}</div>
+      </header>
+
+      {{CONTENT}}
+
+      <hr class="sep">
+      <nav class="pager rv" aria-label="ناوبری فصل‌ها">
+        {{PAGER}}
+      </nav>
+
+      <div class="endline" aria-hidden="true">
+        <span class="prompt"><span class="pr-u">user@linux-tutorials</span><span class="pr-s">:</span><span class="pr-p">~</span><span class="pr-s">$</span></span>
+        <span class="cursor"></span>
+      </div>
+
+    </main>
+
+    <aside class="sidebar" id="sidebar" aria-label="Chapter navigation">
+      <p class="side-cmd"><span class="d">$</span> tree ~/tutorials</p>
+      <ul class="tree">{{TREE}}</ul>
+      <p class="side-cmd"><span class="d">$</span> grep '^## ' {{CHAPTER_FILE}}</p>
+      <ol class="toc" id="tocList"></ol>
+    </aside>
+  </div>
+
+  <footer class="statusbar" aria-hidden="true">
+    <span class="sb-mode" id="sbMode">NORMAL</span>
+    <span class="sb-file">{{CHAPTER_FILE}}</span>
+    <span class="sb-flex"></span>
+    <span class="sb-prog"><span id="sbBar">░░░░░░░░░░░░</span> <span id="sbPct">0%</span></span>
+    <span id="sbTheme">dracula</span>
+    <span class="sb-enc">UTF-8</span>
+    <span class="sb-time" id="sbTime">--:--</span>
+  </footer>
+
+  <div id="toast" role="status" dir="ltr"></div>
+</div>
+
+<div class="modal" id="aboutModal" hidden>
+  <div class="modal-back" data-close></div>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <div class="modal-head"><span id="aboutTitle">man linux-tutorials</span><button class="m-x" data-close aria-label="close">✕</button></div>
+    <div class="modal-body">
+      <p class="man-h">Name</p>
+      <p>linux-tutorials — Farsi Linux tutorials rendered as a terminal</p>
+      <p class="man-h">Description</p>
+      <p>Converts mixed RTL/LTR markdown chapters into terminal-styled static pages. Theme: <b id="aboutTheme">dracula</b>.</p>
+      <p class="man-h">Shortcuts</p>
+      <p><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> — find in chapter<br>
+         <kbd>Esc</kbd> — close menus / dialogs<br>
+         <kbd>↑</kbd> <kbd>↓</kbd> — navigate menus</p>
+    </div>
+    <div class="modal-foot"><button class="m-btn" data-close>[ close ]</button></div>
+  </div>
+</div>
+
+<script>
+window.SITE_BASE = "{{BASE}}";
+window.CURRENT_CHAPTER = "{{CHAPTER_SLUG}}";
+window.SITE = {
+  base: "{{BASE}}",
+  slug: "{{CHAPTER_SLUG}}",
+  file: "{{CHAPTER_FILE}}",
+  tab: "{{TAB_LABEL}}",
+  title: "{{CHAPTER_TITLE}}",
+  path: "{{TITLEBAR_PATH}}",
+  download: "{{DOWNLOAD_URL}}"
+};
+</script>
+<script src="{{BASE}}app.js" defer></script>
 </body>
 </html>
