@@ -7,7 +7,8 @@ var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var SITE=window.SITE||{};
 var SITE_BASE=SITE.base||window.SITE_BASE||'./';
 var INITIAL_CHAT=/\/chat\/?$/.test(location.pathname);
-var CHAPTER=INITIAL_CHAT?'chat':(SITE.slug||window.CURRENT_CHAPTER||'home');
+var INITIAL_HISTORY=/\/chat\/history\/?$/.test(location.pathname);
+var CHAPTER=INITIAL_CHAT?'chat':(INITIAL_HISTORY?'chat-history':(SITE.slug||window.CURRENT_CHAPTER||'home'));
 var catalog=null;
 var heads=[], segs=[], tocLinks=[];
 
@@ -17,6 +18,7 @@ function rootUrl(path){
 }
 function lessonUrl(slug){
   if(slug==='chat') return rootUrl('chat/');
+  if(slug==='chat-history') return rootUrl('chat/history/');
   return slug==='home' ? rootUrl('') : rootUrl('chapters/'+slug+'/');
 }
 
@@ -405,12 +407,27 @@ function applyChrome(meta){
 }
 
 /* ---------- AI chat ---------- */
-var CHAT_KEY='lt-chat-settings', CHAT_HISTORY_KEY='lt-chat-history', chatMessages={};
+var CHAT_KEY='lt-chat-settings', CHAT_HISTORY_KEY='lt-chat-history', CHAT_INDEX_KEY='lt-chat-index', chatMessages={};
 function loadChatHistory(tabId){
-  try{ return JSON.parse(sessionStorage.getItem(CHAT_HISTORY_KEY+':'+tabId)||'[]'); }catch(e){ return []; }
+  try{ return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY+':'+tabId)||'[]'); }catch(e){ return []; }
 }
 function saveChatHistory(tabId){
-  try{ sessionStorage.setItem(CHAT_HISTORY_KEY+':'+tabId, JSON.stringify(chatMessages[tabId]||[])); }catch(e){}
+  try{ localStorage.setItem(CHAT_HISTORY_KEY+':'+tabId, JSON.stringify(chatMessages[tabId]||[])); }catch(e){}
+}
+function chatIndex(){
+  try{ return JSON.parse(localStorage.getItem(CHAT_INDEX_KEY)||'[]'); }catch(e){ return []; }
+}
+function saveChatRecord(tabId, prompt){
+  var records=chatIndex();
+  if(!records.some(function(item){ return item.id===tabId; })){
+    records.unshift({id:tabId, title:'new chat', prompt:prompt, updated:Date.now()});
+    try{ localStorage.setItem(CHAT_INDEX_KEY,JSON.stringify(records)); }catch(e){}
+  }
+}
+function updateChatRecord(tabId, title){
+  var records=chatIndex();
+  records.forEach(function(item){ if(item.id===tabId){ item.title=title; item.updated=Date.now(); } });
+  try{ localStorage.setItem(CHAT_INDEX_KEY,JSON.stringify(records)); }catch(e){}
 }
 function chatSettings(){
   try{
@@ -426,7 +443,7 @@ function promptForSelection(text, language){
 }
 function renderChat(tabId, prefill){
   if(!chatMessages[tabId]) chatMessages[tabId]=loadChatHistory(tabId);
-  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI</h1></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
+  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI <button class="chat-rename" id="chatRename" type="button">rename</button></h1></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
   var input=document.getElementById('chatInput');
   input.value=prefill||'';
   var list=document.getElementById('chatMessages');
@@ -445,6 +462,11 @@ function renderChat(tabId, prefill){
     e.preventDefault();
     sendChat(tabId, input.value.trim());
   });
+  document.getElementById('chatRename').addEventListener('click',function(){
+    var state=tabState(), tab=state.tabs.filter(function(item){ return item.id===tabId; })[0];
+    var title=prompt('Chat name:', tab&&tab.title&&tab.title!=='new chat'?tab.title:'');
+    if(title&&title.trim()){ if(tab){ tab.title=title.trim().slice(0,80); tab.manualTitle=true; } writeTabs(state); updateChatRecord(tabId,tab.title); renderTabs(state); }
+  });
   if(prefill) input.focus();
 }
 function appendChat(tabId, role, content){
@@ -458,9 +480,10 @@ function appendChat(tabId, role, content){
 function nameChatTab(tabId, prompt){
   var state=tabState(), tab=state.tabs.filter(function(item){ return item.id===tabId; })[0];
   if(tab && tab.slug==='chat' && !tab.title){
-    tab.title=prompt.replace(/\s+/g,' ').trim().slice(0,42)||'new chat';
+    tab.title='new chat';
     writeTabs(state); renderTabs(state);
   }
+  saveChatRecord(tabId,prompt);
 }
 async function sendChat(tabId, text){
   if(!text) return;
@@ -495,6 +518,7 @@ async function sendChat(tabId, text){
     }
     if(!assistant.content) throw new Error('The provider returned no text');
     saveChatHistory(tabId);
+    suggestChatTitle(tabId,text,assistant.content);
     renderChat(tabId);
   }catch(error){
     assistant.content='Error: '+error.message;
@@ -531,6 +555,27 @@ async function streamGemini(settings, history, onChunk){
       }catch(e){}
     });
   }
+}
+async function suggestChatTitle(tabId, promptText, answerText){
+  var settings=chatSettings(), title='';
+  try{
+    var instruction='Return only a short title (3 to 6 words) for this chat. No quotes, no punctuation.\\nUser prompt:\\n'+promptText+'\\nAssistant answer:\\n'+answerText.slice(0,3000);
+    if(settings.provider==='google'){
+      var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(settings.model)+':generateContent?key='+encodeURIComponent(settings.apiKey);
+      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:instruction}]}]})});
+      var data=await response.json();
+      title=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    }else{
+      var endpoint=settings.baseUrl.replace(/\/+$/,'')+'/chat/completions';
+      var response2=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+settings.apiKey},body:JSON.stringify({model:settings.model,messages:[{role:'user',content:instruction}],stream:false})});
+      var data2=await response2.json();
+      title=data2.choices?.[0]?.message?.content||'';
+    }
+    title=title.replace(/^["'`]+|["'`]+$/g,'').replace(/\s+/g,' ').trim().slice(0,80);
+  }catch(e){}
+  if(!title) title=promptText.replace(/\s+/g,' ').trim().slice(0,42)||'new chat';
+  var state=tabState(), tab=state.tabs.filter(function(item){ return item.id===tabId; })[0];
+  if(tab&&!tab.manualTitle){ tab.title=title; writeTabs(state); updateChatRecord(tabId,title); renderTabs(state); }
 }
 function openChatSettings(){
   var modal=document.getElementById('chatSettingsModal'), settings=chatSettings();
@@ -671,6 +716,8 @@ async function showLesson(meta, tabId, push){
     return;
   }
   if(meta.slug==='chat'){
+    applyChrome(meta);
+    if(askAi) askAi.hidden=true;
     renderChat(tabId, null);
     if(push!==false) history.pushState({slug:'chat', tab:tabId}, meta.title, rootUrl('chat/'));
     return;
@@ -698,13 +745,19 @@ async function showLesson(meta, tabId, push){
   }
 }
 function renderChatHistory(tabId){
-  var state=tabState();
   pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat / history</p><h1>Chat History</h1><p class="chat-context">Choose a chat to continue it. Chat names come from the first prompt.</p></header><div class="chat-history-list" id="chatHistoryList"></div></div>';
   var list=document.getElementById('chatHistoryList');
-  state.tabs.filter(function(tab){ return tab.slug==='chat'; }).forEach(function(tab){
+  chatIndex().forEach(function(record){
     var button=document.createElement('button'); button.className='chat-history-item'; button.type='button';
-    button.textContent=tab.title||'new chat';
-    button.addEventListener('click',function(){ activateTab(tab.id); });
+    button.textContent=record.title||record.prompt||'new chat';
+    button.addEventListener('click',function(){
+      var state=tabState(), tab=state.tabs.filter(function(item){ return item.id===record.id; })[0];
+      if(tab) activateTab(tab.id);
+      else{
+        state.tabs.push({id:record.id, slug:'chat', title:record.title||'new chat'});
+        state.active=record.id; writeTabs(state); renderTabs(state); showLesson(lessonMeta('chat'),record.id,true);
+      }
+    });
     list.appendChild(button);
   });
   if(!list.children.length){ list.textContent='No chats in this browser session yet.'; }
@@ -781,10 +834,12 @@ window.addEventListener('popstate',function(){
 fetch(rootUrl('chapters.json')).then(function(r){ return r.json(); }).then(function(data){
   catalog=data;
   var state=tabState();
-  if(INITIAL_CHAT){
+  if(INITIAL_CHAT || INITIAL_HISTORY){
     var chatTab={id:newTabId(), slug:'chat'};
     state.tabs=[chatTab]; state.active=chatTab.id;
-    renderTabs(state); showLesson(lessonMeta('chat'), state.active, false); return;
+    renderTabs(state);
+    showLesson(INITIAL_HISTORY?lessonMeta('chat-history'):lessonMeta('chat'), state.active, false);
+    return;
   }
   if(!state.tabs.some(function(t){ return t.id===state.active && t.slug===CHAPTER; })){
     var existing=state.tabs.filter(function(t){ return t.slug===CHAPTER; })[0];

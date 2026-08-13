@@ -270,6 +270,8 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 .chat-history-list{ display:grid; gap:8px; }
 .chat-history-item{ direction:rtl; text-align:right; border:1px solid var(--border); background:var(--code-bg); color:var(--fg-dim); padding:12px; cursor:pointer; font:inherit; }
 .chat-history-item:hover{ border-color:var(--accent); color:var(--fg); background:var(--inline-bg); }
+.chat-rename{ border:1px solid var(--border); background:var(--code-bg); color:var(--fg-dim); padding:3px 8px; font:.7rem var(--mono); cursor:pointer; vertical-align:middle; }
+.chat-rename:hover{ border-color:var(--accent); color:var(--fg); }
 
 /* ---- body grid: content left, sidebar RIGHT ---- */
 .body{ flex:1; min-height:0; display:grid; grid-template-columns:1fr 282px; position:relative; }
