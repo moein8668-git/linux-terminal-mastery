@@ -256,6 +256,7 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 .chat-shell{ direction:rtl; max-width:900px; margin:0 auto; }
 .chat-head{ border-bottom:1px solid var(--border-soft); padding-bottom:16px; margin-bottom:20px; }
 .chat-head h1{ margin:0; }
+.chat-name{ color:var(--accent); font-size:.82em; font-weight:500; margin-inline:8px; }
 .chat-context{ color:var(--fg-faint); font-size:.75rem; }
 .chat-messages{ display:flex; flex-direction:column; gap:12px; margin-bottom:18px; }
 .chat-message{ border:1px solid var(--border); background:var(--code-bg); padding:11px 14px; white-space:pre-wrap; line-height:1.9; }
@@ -267,6 +268,8 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 .thinking-dots i:nth-child(2){ animation-delay:.15s; }.thinking-dots i:nth-child(3){ animation-delay:.3s; }
 @keyframes thinking-dot{ 0%,80%,100%{ transform:translateY(0); opacity:.35; }40%{ transform:translateY(-4px); opacity:1; } }
 .chat-message-body{ white-space:pre-wrap; line-height:1.9; }
+.chat-message-body[dir="ltr"]{ direction:ltr; text-align:left; }
+.chat-message-body[dir="rtl"]{ direction:rtl; text-align:right; }
 .chat-message-body h2,.chat-message-body h3{ color:var(--fg-strong); border-bottom:1px dashed var(--border); padding-bottom:4px; margin:12px 0 8px; }
 .chat-message-body strong{ color:var(--accent-2); }
 .chat-message-body code{ direction:ltr; unicode-bidi:isolate; background:var(--inline-bg); color:var(--syn-tool); padding:1px 5px; }
@@ -281,6 +284,7 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 .chat-history-item:hover{ border-color:var(--accent); color:var(--fg); background:var(--inline-bg); }
 .chat-rename{ border:1px solid var(--border); background:var(--code-bg); color:var(--fg-dim); padding:3px 8px; font:.7rem var(--mono); cursor:pointer; vertical-align:middle; }
 .chat-rename:hover{ border-color:var(--accent); color:var(--fg); }
+.chat-hint{ direction:rtl; color:var(--fg-faint); font-size:.68rem; margin:5px 0 0; }
 
 /* ---- body grid: content left, sidebar RIGHT ---- */
 .body{ flex:1; min-height:0; display:grid; grid-template-columns:1fr 282px; position:relative; }

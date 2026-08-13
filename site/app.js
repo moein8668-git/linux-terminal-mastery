@@ -459,7 +459,9 @@ function formatChatAnswer(text){
 }
 function renderChat(tabId, prefill){
   if(!chatMessages[tabId]) chatMessages[tabId]=loadChatHistory(tabId);
-  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI <button class="chat-rename" id="chatRename" type="button">rename</button></h1></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
+  var chatState=tabState(), chatTab=chatState.tabs.filter(function(item){ return item.id===tabId; })[0];
+  var chatName=chatTab&&chatTab.title||'new chat';
+  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI <span class="chat-name" id="chatName">'+esc(chatName)+'</span> <button class="chat-rename" id="chatRename" type="button">rename</button></h1></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form><p class="chat-hint">Enter = send&nbsp;&nbsp;·&nbsp;&nbsp;Shift + Enter = new line</p></div>';
   var input=document.getElementById('chatInput');
   input.value=prefill||'';
   var list=document.getElementById('chatMessages');
@@ -490,6 +492,12 @@ function renderChat(tabId, prefill){
   document.getElementById('chatForm').addEventListener('submit',function(e){
     e.preventDefault();
     sendChat(tabId, input.value.trim());
+  });
+  input.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!e.shiftKey){
+      e.preventDefault();
+      sendChat(tabId,input.value.trim());
+    }
   });
   document.getElementById('chatRename').addEventListener('click',function(){
     var state=tabState(), tab=state.tabs.filter(function(item){ return item.id===tabId; })[0];
@@ -522,7 +530,7 @@ async function sendChat(tabId, text){
   var firstResponse=!chatMessages[tabId].some(function(message){ return message.role==='user'; });
   appendChat(tabId,'user',text);
   nameChatTab(tabId,text);
-  var assistant={role:'assistant',content:''};
+  var assistant={role:'assistant',content:'',pending:true};
   chatMessages[tabId].push(assistant);
   saveChatHistory(tabId);
   renderChat(tabId);
@@ -547,11 +555,13 @@ async function sendChat(tabId, text){
       assistant.content=data.choices?.[0]?.message?.content||'';
     }
     if(!assistant.content) throw new Error('The provider returned no text');
+    assistant.pending=false;
     saveChatHistory(tabId);
     if(firstResponse) suggestChatTitle(tabId,text,assistant.content);
     renderChat(tabId);
   }catch(error){
     assistant.content='Error: '+error.message;
+    assistant.pending=false;
     saveChatHistory(tabId);
     renderChat(tabId);
   }
@@ -808,6 +818,7 @@ async function openLesson(slug, forceNew, prefill){
     if(cur){
       if(cur.slug!==slug) delete tabCache[cur.id];
       cur.slug=slug;
+      if(slug!=='chat') { delete cur.title; delete cur.manualTitle; }
     }else{
       cur={id:newTabId(), slug:slug};
       state.tabs.push(cur);
