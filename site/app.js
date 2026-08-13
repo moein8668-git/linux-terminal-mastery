@@ -15,6 +15,7 @@ function rootUrl(path){
   return new URL(String(path||'').replace(/^\/+/,''), siteRoot).href;
 }
 function lessonUrl(slug){
+  if(slug==='chat') return rootUrl('chat/');
   return slug==='home' ? rootUrl('') : rootUrl('chapters/'+slug+'/');
 }
 
@@ -401,6 +402,150 @@ function applyChrome(meta){
   });
 }
 
+/* ---------- AI chat ---------- */
+var CHAT_KEY='lt-chat-settings', chatMessages={};
+function chatSettings(){
+  try{
+    return Object.assign({provider:'google', model:'gemini-3.6-flash', baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai', apiKey:'', language:'fa'}, JSON.parse(sessionStorage.getItem(CHAT_KEY)||'{}'));
+  }catch(e){ return {provider:'google', model:'gemini-3.6-flash', baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai', apiKey:'', language:'fa'}; }
+}
+function saveChatSettings(value){
+  try{ sessionStorage.setItem(CHAT_KEY, JSON.stringify(value)); }catch(e){}
+}
+function promptForSelection(text, language){
+  if(language==='en') return `Explain this selected part of the Linux tutorial clearly. Define unfamiliar terms, explain what each command or concept does, and include a small practical example. Do not assume prior knowledge.\n\nSelected part:\n${text}`;
+  return `این بخش انتخاب‌شده از آموزش لینوکس را به زبان فارسی ساده و دقیق توضیح بده. اصطلاحات ناآشنا، کاربرد دستورها یا مفهوم اصلی را توضیح بده و یک مثال عملی کوتاه هم اضافه کن. فرض نکن کاربر دانش قبلی دارد.\n\nبخش انتخاب‌شده:\n${text}`;
+}
+function renderChat(tabId, prefill){
+  if(!chatMessages[tabId]) chatMessages[tabId]=[];
+  pane.innerHTML='<div class="chat-shell" dir="rtl"><header class="chat-head"><p class="filepath-line">terminal / chat</p><h1>Ask AI</h1><p class="chat-context">Ask about this tutorial. Your prompt is editable and is never sent automatically.</p></header><div class="chat-messages" id="chatMessages"></div><form class="chat-form" id="chatForm"><textarea class="chat-input" id="chatInput" placeholder="سؤال خود را بنویسید…"></textarea><button class="chat-send" type="submit">Send ↵</button></form></div>';
+  var input=document.getElementById('chatInput');
+  input.value=prefill||'';
+  var list=document.getElementById('chatMessages');
+  chatMessages[tabId].forEach(function(message){
+    var item=document.createElement('div'); item.className='chat-message '+message.role; item.textContent=message.content; list.appendChild(item);
+  });
+  document.getElementById('chatForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    sendChat(tabId, input.value.trim());
+  });
+  if(prefill) input.focus();
+}
+function appendChat(tabId, role, content){
+  chatMessages[tabId]=chatMessages[tabId]||[];
+  chatMessages[tabId].push({role:role, content:content});
+  renderChat(tabId);
+  var list=document.getElementById('chatMessages');
+  if(list) list.lastElementChild?.scrollIntoView({block:'nearest'});
+}
+async function sendChat(tabId, text){
+  if(!text) return;
+  var settings=chatSettings();
+  if(!settings.apiKey){ openChatSettings(); toast('Add your personal API key first'); return; }
+  if(!settings.baseUrl){ openChatSettings(); toast('Add the provider API base URL first'); return; }
+  appendChat(tabId,'user',text);
+  var assistant={role:'assistant',content:''};
+  chatMessages[tabId].push(assistant);
+  renderChat(tabId);
+  var send=document.querySelector('.chat-send');
+  if(send) send.disabled=true;
+  try{
+    if(settings.provider==='google'){
+      await streamGemini(settings, chatMessages[tabId], function(text){
+        assistant.content+=text;
+        renderChat(tabId);
+      });
+    }else{
+      var endpoint=settings.baseUrl.replace(/\/+$/,'')+'/chat/completions';
+      var messages=chatMessages[tabId].filter(function(message){ return message.content; });
+      messages=messages.map(function(message){ return {role:message.role==='assistant'?'assistant':'user',content:message.content}; });
+      var response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+settings.apiKey},body:JSON.stringify({
+        model:settings.model, messages:messages, stream:false
+      })});
+      var data=await response.json();
+      if(!response.ok) throw new Error(data.error?.message||data.error||'Provider request failed');
+      assistant.content=data.choices?.[0]?.message?.content||'';
+    }
+    if(!assistant.content) throw new Error('The provider returned no text');
+    renderChat(tabId);
+  }catch(error){
+    assistant.content='Error: '+error.message;
+    renderChat(tabId);
+  }
+  finally{ var button=document.querySelector('.chat-send'); if(button) button.disabled=false; }
+}
+async function streamGemini(settings, history, onChunk){
+  var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(settings.model)+':streamGenerateContent?alt=sse&key='+encodeURIComponent(settings.apiKey);
+  var contents=history.filter(function(message){ return message.content; }).map(function(message){
+    return {role:message.role==='assistant'?'model':'user', parts:[{text:message.content}]};
+  });
+  var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:contents})});
+  if(!response.ok){
+    var detail='';
+    try{ detail=(await response.json()).error?.message||''; }catch(e){}
+    throw new Error('API request failed ('+response.status+'). '+detail);
+  }
+  var reader=response.body.getReader(), decoder=new TextDecoder(), buffer='';
+  while(true){
+    var part=await reader.read(); if(part.done) break;
+    buffer+=decoder.decode(part.value,{stream:true});
+    var lines=buffer.split('\n'); buffer=lines.pop();
+    lines.forEach(function(line){
+      var trimmed=line.trim();
+      if(!trimmed.startsWith('data:')) return;
+      var raw=trimmed.slice(5).trim();
+      if(!raw||raw==='[DONE]') return;
+      try{
+        var obj=JSON.parse(raw);
+        var parts=obj.candidates?.[0]?.content?.parts||[];
+        parts.forEach(function(item){ if(item.text) onChunk(item.text); });
+      }catch(e){}
+    });
+  }
+}
+function openChatSettings(){
+  var modal=document.getElementById('chatSettingsModal'), settings=chatSettings();
+  if(!modal) return;
+  modal.hidden=false;
+  document.getElementById('chatProvider').value=settings.provider;
+  document.getElementById('chatModel').value=settings.model;
+  document.getElementById('chatCustomModel').value=settings.model;
+  document.getElementById('chatBaseUrl').value=settings.baseUrl;
+  document.getElementById('chatApiKey').value=settings.apiKey;
+  document.getElementById('chatLanguage').value=settings.language;
+  document.getElementById('customModelRow').hidden=settings.provider!=='openai-compatible';
+}
+var chatModal=document.getElementById('chatSettingsModal');
+document.querySelectorAll('[data-close-chat-settings]').forEach(function(el){ el.addEventListener('click',function(){ chatModal.hidden=true; }); });
+var chatProvider=document.getElementById('chatProvider');
+if(chatProvider) chatProvider.addEventListener('change',function(){
+  document.getElementById('customModelRow').hidden=chatProvider.value!=='openai-compatible';
+});
+var chatSettingsForm=document.getElementById('chatSettingsForm');
+if(chatSettingsForm) chatSettingsForm.addEventListener('submit',function(e){
+  e.preventDefault();
+  saveChatSettings({provider:chatProvider.value, model:chatProvider.value==='openai-compatible'?document.getElementById('chatCustomModel').value.trim():document.getElementById('chatModel').value, baseUrl:document.getElementById('chatBaseUrl').value.trim(), apiKey:document.getElementById('chatApiKey').value, language:document.getElementById('chatLanguage').value});
+  chatModal.hidden=true; toast('✓ chatbot settings saved for this tab');
+});
+var settingsChat=document.querySelector('[data-act="chatbot-settings"]');
+if(settingsChat) settingsChat.addEventListener('click',function(){ closeMenus(); openChatSettings(); });
+var askAi=document.getElementById('askAi'), selectedPrompt='';
+document.addEventListener('selectionchange',function(){
+  var selection=window.getSelection(), text=selection?.toString().trim();
+  if(!askAi||CHAPTER==='chat'||!text||!pane.contains(selection.anchorNode)){ if(askAi) askAi.hidden=true; return; }
+  selectedPrompt=text;
+  var rect=selection.getRangeAt(0).getBoundingClientRect();
+  askAi.style.left=Math.max(10,Math.min(window.innerWidth-150,rect.left))+'px';
+  askAi.style.top=Math.max(10,rect.top-42)+'px';
+  askAi.hidden=false;
+});
+if(askAi) askAi.addEventListener('mousedown',function(e){ e.preventDefault(); });
+if(askAi) askAi.addEventListener('click',function(){
+  var settings=chatSettings();
+  askAi.hidden=true;
+  openLesson('chat',true,promptForSelection(selectedPrompt,settings.language));
+});
+
 function bindPane(first){
   highlightCodes();
   bindCopy();
@@ -431,6 +576,7 @@ var tabCache={};
 var activeTabId=null;
 function lessonMeta(slug){
   if(!catalog) return null;
+  if(slug==='chat') return {slug:'chat', tab:'chat', file:'chat', title:'Ask AI', path:'~/chat', download:''};
   if(slug==='home') return catalog.home;
   return (catalog.chapters||[]).filter(function(c){ return c.slug===slug; })[0]||null;
 }
@@ -489,6 +635,11 @@ function renderTabs(state){
   activeTabId=state.active;
 }
 async function showLesson(meta, tabId, push){
+  if(meta.slug==='chat'){
+    renderChat(tabId, null);
+    if(push!==false) history.pushState({slug:'chat', tab:tabId}, meta.title, rootUrl('chat/'));
+    return;
+  }
   var cached=tabCache[tabId];
   if(cached&&cached.slug===meta.slug){
     pane.innerHTML=cached.html;
@@ -511,7 +662,7 @@ async function showLesson(meta, tabId, push){
     history.pushState({slug:meta.slug, tab:tabId}, meta.title, address.pathname+address.search+address.hash);
   }
 }
-async function openLesson(slug, forceNew){
+async function openLesson(slug, forceNew, prefill){
   var meta=lessonMeta(slug);
   if(!meta){ location.href=lessonUrl(slug); return; }
   var state=tabState();
@@ -534,7 +685,9 @@ async function openLesson(slug, forceNew){
     }
   }
   renderTabs(state);
+  if(prefill) chatMessages[state.active]=[];
   await showLesson(meta, state.active, true);
+  if(prefill) renderChat(state.active, prefill);
 }
 async function activateTab(id){
   var state=tabState();
