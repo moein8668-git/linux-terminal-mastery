@@ -445,7 +445,7 @@ function formatChatAnswer(text){
   var blocks=[];
   var safe=text.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g,function(_,lang,code){
     var id='@@CODE_'+blocks.length+'@@';
-    blocks.push('<pre class="chat-code"><code class="language-'+(lang||'text')+'">'+esc(code.trim())+'</code></pre>');
+    blocks.push('<div class="term-mini ai-code"><div class="tm-head"><span class="tm-title"><b>AI@linux-tutorials</b>: ~/answer</span><span class="tm-lang">'+(lang||'TEXT').toUpperCase()+'</span><button class="copy chat-copy" type="button">copy</button></div><pre><code class="language-'+(lang||'text')+'">'+esc(code.trim())+'</code></pre></div>');
     return id;
   });
   safe=esc(safe);
@@ -465,17 +465,27 @@ function renderChat(tabId, prefill){
   var list=document.getElementById('chatMessages');
   chatMessages[tabId].forEach(function(message){
     var item=document.createElement('div'); item.className='chat-message '+message.role;
-    if(message.role==='assistant'){
+    if(message.role==='assistant'||message.role==='user'){
       var prompt=document.createElement('div'); prompt.className='chat-terminal-prompt';
-      prompt.textContent=message.pending?'AI@linux-tutorials:~$ generating…':'AI@linux-tutorials:~$ cat answer.md';
+      prompt.textContent=message.role==='user'?'USER@linux-tutorials:~$ cat question.md':'AI@linux-tutorials:~$ cat answer.md';
       item.appendChild(prompt);
-      if(message.pending){ var cursor=document.createElement('span'); cursor.className='cursor'; prompt.appendChild(cursor); }
+      if(message.pending){
+        var dots=document.createElement('span'); dots.className='thinking-dots';
+        dots.innerHTML='<i></i><i></i><i></i>'; prompt.appendChild(dots);
+      }
     }
     var body=document.createElement('div'); body.className='chat-message-body'; body.dir=/[\u0600-\u06ff]/.test(message.content)?'rtl':'ltr';
     if(message.role==='assistant'&&!message.pending) body.innerHTML=formatChatAnswer(message.content);
     else body.textContent=message.content;
     item.appendChild(body);
     list.appendChild(item);
+  });
+  list.querySelectorAll('.chat-copy').forEach(function(button){
+    button.addEventListener('click',function(){
+      navigator.clipboard?.writeText(button.closest('.term-mini').querySelector('code').textContent);
+      button.textContent='copied ✓';
+      setTimeout(function(){ button.textContent='copy'; },1200);
+    });
   });
   document.getElementById('chatForm').addEventListener('submit',function(e){
     e.preventDefault();
