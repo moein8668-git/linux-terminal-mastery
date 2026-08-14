@@ -1,0 +1,19 @@
+{
+  "name": "linux-terminal-mastery-site",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "npm run build"
+  },
+  "dependencies": {
+    "marked": "^16.2.0",
+    "vault66-crt-effect": "^3.1.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.122.0"
+  }
+}
