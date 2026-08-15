@@ -274,6 +274,7 @@ code,pre,kbd,samp{ direction:ltr; unicode-bidi:isolate; }
 .chat-line[dir="rtl"]{ direction:rtl; text-align:right; }
 .chat-message-body h2,.chat-message-body h3{ color:var(--fg-strong); border-bottom:1px dashed var(--border); padding-bottom:4px; margin:12px 0 8px; }
 .chat-message-body strong{ color:var(--accent-2); }
+.chat-bullet{ display:inline-block; color:var(--accent); font-size:1.15em; margin-inline-end:8px; }
 .chat-message-body code{ direction:ltr; unicode-bidi:isolate; background:var(--inline-bg); color:var(--syn-tool); padding:1px 5px; }
 .chat-code{ direction:ltr; text-align:left; overflow:auto; background:var(--code-bg); border:1px solid var(--border); padding:12px; margin:10px 0; }
 .chat-code code{ background:none; padding:0; color:var(--fg); white-space:pre; }
@@ -359,9 +360,9 @@ p code, li code, td code, .note code, h2 code, h3 code{
 .note-tag{ direction:ltr; font-weight:700; flex-shrink:0; }
 .note.warn{ border-inline-start-color:var(--warn); } .note.warn .note-tag{ color:var(--warn); }
 .note.info{ border-inline-start-color:var(--accent-3); } .note.info .note-tag{ color:var(--accent-3); }
-.diagram{ direction:ltr; width:fit-content; margin:1.4em auto; text-align:center;
+.diagram{ direction:ltr; width:fit-content; max-width:100%; overflow-x:auto; margin:1.4em auto; text-align:center;
   border:1px dashed var(--border); padding:18px 34px; color:var(--fg-dim);
-  font-size:.9rem; line-height:1.7; background:var(--code-bg); }
+  font-size:.9rem; line-height:1.7; background:var(--code-bg); white-space:pre-wrap; overflow-wrap:anywhere; }
 .tbl-wrap{ overflow-x:auto; margin:1.3em 0; }
 .tbl{ width:100%; border-collapse:collapse; font-size:.93rem; }
 .tbl th,.tbl td{ border:1px solid var(--border); padding:11px 16px; line-height:1.9; }
