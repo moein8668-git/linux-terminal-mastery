@@ -459,8 +459,8 @@ function formatChatAnswer(text){
     return id;
   });
   return safe.split('\n').map(function(line){
-    var code=blocks.findIndex(function(block){ return line==='@@CODE_'+blocks.indexOf(block)+'@@'; });
-    if(code!==-1) return blocks[code];
+    var marker=line.match(/^\s*@@CODE_(\d+)@@\s*$/);
+    if(marker) return blocks[Number(marker[1])];
     var html=esc(line);
     html=html.replace(/^###\s+(.+)$/,'<h3>$1</h3>').replace(/^##\s+(.+)$/,'<h2>$1</h2>');
     html=html.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');
