@@ -363,6 +363,7 @@ p code, li code, td code, .note code, h2 code, h3 code{
 .diagram{ direction:ltr; width:fit-content; max-width:100%; overflow-x:auto; margin:1.4em auto; text-align:center;
   border:1px dashed var(--border); padding:18px 34px; color:var(--fg-dim);
   font-size:.9rem; line-height:1.7; background:var(--code-bg); white-space:pre-wrap; overflow-wrap:anywhere; }
+.diagram-line{ width:100%; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-all; }
 .tbl-wrap{ overflow-x:auto; margin:1.3em 0; }
 .tbl{ width:100%; border-collapse:collapse; font-size:.93rem; }
 .tbl th,.tbl td{ border:1px solid var(--border); padding:11px 16px; line-height:1.9; }

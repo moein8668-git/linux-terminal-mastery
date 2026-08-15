@@ -121,7 +121,8 @@ const renderMarkdown = (markdown, ctx) => {
     },
     code({ text, lang }) {
       if (isDiagram(text, lang)) {
-        return `<pre class="diagram">${escapeHtml(text)}</pre>\n`;
+        const singleLine = !text.includes("\n");
+        return `<pre class="diagram${singleLine ? " diagram-line" : ""}">${escapeHtml(text)}</pre>\n`;
       }
       return `${termMini(text, { ...ctx, lang: lang || "bash" })}\n`;
     },
